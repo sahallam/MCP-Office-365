@@ -1,0 +1,179 @@
+/**
+ * Calendar tools for MCP server
+ */
+
+import { Client } from '@microsoft/microsoft-graph-client';
+import { CalendarEvent } from '../types.js';
+
+export class CalendarTools {
+  constructor(private graphClient: Client, private userId: string) {}
+
+  /**
+   * List calendar events
+   */
+  async listEvents(options: {
+    startDateTime?: string;
+    endDateTime?: string;
+    top?: number;
+    filter?: string;
+  } = {}): Promise<CalendarEvent[]> {
+    const { top = 10, filter } = options;
+
+    let query = this.graphClient
+      .api(`/users/${this.userId}/calendar/events`)
+      .top(top)
+      .select(['id', 'subject', 'start', 'end', 'location', 'attendees', 'isOnlineMeeting', 'onlineMeetingUrl'])
+      .orderby('start/dateTime');
+
+    if (filter) {
+      query = query.filter(filter);
+    }
+
+    const result = await query.get();
+    return result.value;
+  }
+
+  /**
+   * Get calendar view for a specific time range
+   */
+  async getCalendarView(startDateTime: string, endDateTime: string): Promise<CalendarEvent[]> {
+    const result = await this.graphClient
+      .api(`/users/${this.userId}/calendar/calendarView`)
+      .query({
+        startDateTime,
+        endDateTime,
+      })
+      .select(['id', 'subject', 'start', 'end', 'location', 'attendees', 'isOnlineMeeting', 'onlineMeetingUrl'])
+      .orderby('start/dateTime')
+      .get();
+
+    return result.value;
+  }
+
+  /**
+   * Get a specific event by ID
+   */
+  async getEvent(eventId: string): Promise<CalendarEvent> {
+    const event = await this.graphClient
+      .api(`/users/${this.userId}/calendar/events/${eventId}`)
+      .get();
+
+    return event;
+  }
+
+  /**
+   * Create a calendar event
+   */
+  async createEvent(event: CalendarEvent): Promise<CalendarEvent> {
+    const eventObject = {
+      subject: event.subject,
+      body: event.body,
+      start: event.start,
+      end: event.end,
+      location: event.location,
+      attendees: event.attendees,
+      isOnlineMeeting: event.isOnlineMeeting || false,
+    };
+
+    const createdEvent = await this.graphClient
+      .api(`/users/${this.userId}/calendar/events`)
+      .post(eventObject);
+
+    return createdEvent;
+  }
+
+  /**
+   * Update a calendar event
+   */
+  async updateEvent(eventId: string, updates: Partial<CalendarEvent>): Promise<CalendarEvent> {
+    const updatedEvent = await this.graphClient
+      .api(`/users/${this.userId}/calendar/events/${eventId}`)
+      .patch(updates);
+
+    return updatedEvent;
+  }
+
+  /**
+   * Delete a calendar event
+   */
+  async deleteEvent(eventId: string): Promise<void> {
+    await this.graphClient
+      .api(`/users/${this.userId}/calendar/events/${eventId}`)
+      .delete();
+  }
+
+  /**
+   * Accept a meeting
+   */
+  async acceptMeeting(eventId: string, comment?: string): Promise<void> {
+    await this.graphClient
+      .api(`/users/${this.userId}/events/${eventId}/accept`)
+      .post({
+        comment: comment || '',
+        sendResponse: true,
+      });
+  }
+
+  /**
+   * Decline a meeting
+   */
+  async declineMeeting(eventId: string, comment?: string): Promise<void> {
+    await this.graphClient
+      .api(`/users/${this.userId}/events/${eventId}/decline`)
+      .post({
+        comment: comment || '',
+        sendResponse: true,
+      });
+  }
+
+  /**
+   * Tentatively accept a meeting
+   */
+  async tentativelyAcceptMeeting(eventId: string, comment?: string): Promise<void> {
+    await this.graphClient
+      .api(`/users/${this.userId}/events/${eventId}/tentativelyAccept`)
+      .post({
+        comment: comment || '',
+        sendResponse: true,
+      });
+  }
+
+  /**
+   * Find meeting times
+   */
+  async findMeetingTimes(options: {
+    attendees: string[];
+    timeConstraint: {
+      timeslots: Array<{ start: { dateTime: string; timeZone: string }; end: { dateTime: string; timeZone: string } }>;
+    };
+    meetingDuration: string; // ISO 8601 duration format (e.g., 'PT1H' for 1 hour)
+    maxCandidates?: number;
+  }): Promise<any> {
+    const requestBody = {
+      attendees: options.attendees.map(email => ({
+        emailAddress: { address: email },
+        type: 'required',
+      })),
+      timeConstraint: options.timeConstraint,
+      meetingDuration: options.meetingDuration,
+      maxCandidates: options.maxCandidates || 5,
+    };
+
+    const result = await this.graphClient
+      .api(`/users/${this.userId}/findMeetingTimes`)
+      .post(requestBody);
+
+    return result;
+  }
+
+  /**
+   * List calendars
+   */
+  async listCalendars(): Promise<any[]> {
+    const result = await this.graphClient
+      .api(`/users/${this.userId}/calendars`)
+      .get();
+
+    return result.value;
+  }
+}
