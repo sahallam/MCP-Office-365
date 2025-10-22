@@ -5,7 +5,7 @@ This guide walks you through the complete setup process for the Office365 MCP Se
 ## Table of Contents
 
 1. [Prerequisites](#prerequisites)
-2. [Azure AD Application Setup](#azure-ad-application-setup)
+2. [Microsoft Entra ID Application Setup](#microsoft-entra-id-application-setup)
 3. [Installing the Server](#installing-the-server)
 4. [Configuration](#configuration)
 5. [Testing the Setup](#testing-the-setup)
@@ -17,15 +17,17 @@ Before you begin, ensure you have:
 
 - **Node.js 18+**: [Download](https://nodejs.org/)
 - **npm** or **yarn**: Comes with Node.js
-- **Azure Account**: With permissions to create Azure AD applications
+- **Azure Account**: With permissions to create Microsoft Entra ID applications
 - **Microsoft 365**: Access to a Microsoft 365 tenant
 
-## Azure AD Application Setup
+## Microsoft Entra ID Application Setup
 
-### Step 1: Create an Azure AD Application
+> **Note**: Microsoft Entra ID is the new name for Azure Active Directory. The Azure Portal may show either name depending on when it was last updated.
+
+### Step 1: Create a Microsoft Entra ID Application
 
 1. Navigate to the [Azure Portal](https://portal.azure.com)
-2. Go to **Azure Active Directory**
+2. Go to **Microsoft Entra ID** (you may see **Azure Active Directory** in older portal views)
 3. Select **App registrations** from the left menu
 4. Click **+ New registration**
 
@@ -303,8 +305,8 @@ Edit the configuration file:
 
 **Solutions:**
 1. Double-check all credentials in `.env`
-2. Verify the client secret hasn't expired (Azure Portal > App registrations > Certificates & secrets)
-3. Re-grant admin consent (Azure Portal > App registrations > API permissions)
+2. Verify the client secret hasn't expired (Azure Portal > Microsoft Entra ID > App registrations > Certificates & secrets)
+3. Re-grant admin consent (Azure Portal > Microsoft Entra ID > App registrations > API permissions)
 
 ### Issue: "Insufficient privileges"
 
@@ -343,7 +345,7 @@ npm run build
 1. **Never commit `.env`** - It's already in `.gitignore`, but be careful
 2. **Rotate secrets regularly** - Set a reminder to rotate client secrets
 3. **Use Azure Key Vault** - For production deployments
-4. **Monitor access logs** - Review Azure AD sign-in logs regularly
+4. **Monitor access logs** - Review Microsoft Entra ID sign-in logs regularly
 5. **Principle of least privilege** - Only grant necessary permissions
 
 ## Next Steps
@@ -353,14 +355,14 @@ After successful setup:
 1. **Explore Available Tools**: See [README.md](README.md#available-tools) for a complete list
 2. **Try Example Prompts**: Test different features with Claude
 3. **Customize Permissions**: Adjust based on your needs
-4. **Monitor Usage**: Check Azure AD logs and Graph API usage
+4. **Monitor Usage**: Check Microsoft Entra ID logs and Graph API usage
 
 ## Getting Help
 
 If you encounter issues:
 
 1. Check the [Troubleshooting](README.md#troubleshooting) section in README.md
-2. Review Azure AD error logs in the Azure Portal
+2. Review Microsoft Entra ID error logs in the Azure Portal
 3. Open an issue on GitHub with:
    - Error messages (remove sensitive data)
    - Steps to reproduce
@@ -369,6 +371,6 @@ If you encounter issues:
 ## Additional Resources
 
 - [Microsoft Graph API Documentation](https://docs.microsoft.com/en-us/graph/)
-- [Azure AD App Registration Guide](https://docs.microsoft.com/en-us/azure/active-directory/develop/quickstart-register-app)
+- [Microsoft Entra ID App Registration Guide](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app)
 - [Model Context Protocol Specification](https://modelcontextprotocol.io)
 - [MSAL Node Documentation](https://github.com/AzureAD/microsoft-authentication-library-for-js/tree/dev/lib/msal-node)

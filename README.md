@@ -64,16 +64,16 @@ A comprehensive [Model Context Protocol](https://modelcontextprotocol.io) (MCP) 
 
 ## Prerequisites
 
-1. **Azure AD Application**: You need to register an application in Azure Active Directory
+1. **Microsoft Entra ID Application**: You need to register an application in Microsoft Entra ID (formerly Azure Active Directory)
 2. **Required Permissions**: The application needs appropriate Microsoft Graph API permissions
 3. **Node.js**: Version 18.0.0 or higher
 
 ## Setup
 
-### 1. Azure AD Application Registration
+### 1. Microsoft Entra ID Application Registration
 
 1. Go to the [Azure Portal](https://portal.azure.com)
-2. Navigate to **Azure Active Directory** > **App registrations**
+2. Navigate to **Microsoft Entra ID** (or **Azure Active Directory**) > **App registrations**
 3. Click **New registration**
 4. Enter a name (e.g., "Office365 MCP Server")
 5. Select **Accounts in this organizational directory only**
@@ -142,7 +142,7 @@ Create a `.env` file in the root directory:
 cp .env.example .env
 ```
 
-Edit the `.env` file with your Azure AD application details:
+Edit the `.env` file with your Microsoft Entra ID application details:
 
 ```env
 TENANT_ID=your-tenant-id
@@ -159,7 +159,7 @@ USER_PRINCIPAL_NAME=user@yourdomain.com
 ```
 
 To find these values:
-- **TENANT_ID**: In Azure Portal > Azure Active Directory > Overview > Tenant ID
+- **TENANT_ID**: In Azure Portal > Microsoft Entra ID > Overview > Tenant ID
 - **CLIENT_ID**: In your app registration > Overview > Application (client) ID
 - **CLIENT_SECRET**: The value you copied when creating the client secret
 
@@ -291,10 +291,12 @@ office365-mcp-server/
 The server uses the **Client Credentials Flow** (app-only authentication):
 
 1. Server loads credentials from environment variables
-2. Authenticates with Azure AD using MSAL (Microsoft Authentication Library)
+2. Authenticates with Microsoft Entra ID using MSAL (Microsoft Authentication Library)
 3. Obtains an access token for Microsoft Graph API
 4. Uses the token for all API requests
 5. Automatically refreshes the token when it expires
+
+> **Note**: While Microsoft rebranded Azure AD to Microsoft Entra ID, authentication endpoints and some API references still use the `login.microsoftonline.com` domain for backwards compatibility.
 
 ### Technology Stack
 
@@ -322,7 +324,7 @@ npm run watch
 
 The codebase is organized into modular components:
 
-- **Authentication Layer** (`auth.ts`): Handles Azure AD authentication
+- **Authentication Layer** (`auth.ts`): Handles Microsoft Entra ID authentication
 - **Tool Modules** (`tools/`): Each Office 365 service has its own module
 - **Type Definitions** (`types.ts`): Shared TypeScript interfaces
 - **MCP Server** (`index.ts`): Main server implementation with tool handlers
@@ -358,7 +360,7 @@ DEBUG=* npm start
 - **Never commit** your `.env` file or expose credentials
 - **Rotate client secrets** regularly
 - **Use least privilege**: Only grant necessary permissions
-- **Monitor access**: Review Azure AD sign-in logs regularly
+- **Monitor access**: Review Microsoft Entra ID sign-in logs regularly
 - **Secure storage**: Store credentials securely (use Azure Key Vault in production)
 
 ## Limitations
