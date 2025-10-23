@@ -116,3 +116,59 @@ export interface WordDocument {
   name: string;
   webUrl: string;
 }
+
+export interface OneNoteNotebook {
+  id: string;
+  displayName: string;
+  createdDateTime?: string;
+  lastModifiedDateTime?: string;
+  isDefault?: boolean;
+  userRole?: string;
+  isShared?: boolean;
+  sectionsUrl?: string;
+  sectionGroupsUrl?: string;
+  links?: {
+    oneNoteClientUrl?: {
+      href: string;
+    };
+    oneNoteWebUrl?: {
+      href: string;
+    };
+  };
+}
+
+export interface OneNoteSection {
+  id: string;
+  displayName: string;
+  createdDateTime?: string;
+  lastModifiedDateTime?: string;
+  isDefault?: boolean;
+  pagesUrl?: string;
+  parentNotebook?: {
+    id: string;
+    displayName: string;
+  };
+}
+
+export interface OneNotePage {
+  id: string;
+  title: string;
+  content?: string;
+  contentUrl?: string;
+  createdDateTime?: string;
+  lastModifiedDateTime?: string;
+  level?: number;
+  order?: number;
+  links?: {
+    oneNoteClientUrl?: {
+      href: string;
+    };
+    oneNoteWebUrl?: {
+      href: string;
+    };
+  };
+  parentSection?: {
+    id: string;
+    displayName: string;
+  };
+}

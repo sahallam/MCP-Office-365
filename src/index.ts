@@ -4,7 +4,7 @@
  * Office365 MCP Server
  *
  * A Model Context Protocol server for Microsoft Office 365 integration
- * Provides tools for interacting with Outlook, Calendar, OneDrive, SharePoint, Teams, Excel, and Word
+ * Provides tools for interacting with Outlook, Calendar, OneDrive, SharePoint, Teams, Excel, Word, and OneNote
  */
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
@@ -23,6 +23,7 @@ import { SharePointTools } from './tools/sharepoint.js';
 import { TeamsTools } from './tools/teams.js';
 import { ExcelTools } from './tools/excel.js';
 import { WordTools } from './tools/word.js';
+import { OneNoteTools } from './tools/onenote.js';
 import { GraphConfig } from './types.js';
 
 // Load environment variables
@@ -424,6 +425,192 @@ const TOOLS: Tool[] = [
       required: ['itemId'],
     },
   },
+
+  // OneNote Tools
+  {
+    name: 'onenote_list_notebooks',
+    description: 'List all OneNote notebooks',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        top: { type: 'number', description: 'Number of notebooks to retrieve (default: 50)' },
+        orderBy: { type: 'string', description: 'Order by field (default: lastModifiedDateTime DESC)' },
+      },
+    },
+  },
+  {
+    name: 'onenote_get_notebook',
+    description: 'Get a specific OneNote notebook by ID',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        notebookId: { type: 'string', description: 'The notebook ID' },
+      },
+      required: ['notebookId'],
+    },
+  },
+  {
+    name: 'onenote_create_notebook',
+    description: 'Create a new OneNote notebook',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        displayName: { type: 'string', description: 'Name of the notebook' },
+      },
+      required: ['displayName'],
+    },
+  },
+  {
+    name: 'onenote_list_sections',
+    description: 'List sections in a notebook or all sections',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        notebookId: { type: 'string', description: 'The notebook ID (optional, lists all sections if not provided)' },
+        top: { type: 'number', description: 'Number of sections to retrieve (default: 50)' },
+      },
+    },
+  },
+  {
+    name: 'onenote_get_section',
+    description: 'Get a specific OneNote section by ID',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        sectionId: { type: 'string', description: 'The section ID' },
+      },
+      required: ['sectionId'],
+    },
+  },
+  {
+    name: 'onenote_create_section',
+    description: 'Create a new section in a notebook',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        notebookId: { type: 'string', description: 'The notebook ID' },
+        displayName: { type: 'string', description: 'Name of the section' },
+      },
+      required: ['notebookId', 'displayName'],
+    },
+  },
+  {
+    name: 'onenote_list_pages',
+    description: 'List pages in a section, notebook, or all pages',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        sectionId: { type: 'string', description: 'The section ID (optional)' },
+        notebookId: { type: 'string', description: 'The notebook ID (optional)' },
+        top: { type: 'number', description: 'Number of pages to retrieve (default: 50)' },
+        search: { type: 'string', description: 'Search query string (optional)' },
+      },
+    },
+  },
+  {
+    name: 'onenote_get_page',
+    description: 'Get a specific OneNote page by ID',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        pageId: { type: 'string', description: 'The page ID' },
+      },
+      required: ['pageId'],
+    },
+  },
+  {
+    name: 'onenote_get_page_content',
+    description: 'Get the HTML content of a OneNote page',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        pageId: { type: 'string', description: 'The page ID' },
+      },
+      required: ['pageId'],
+    },
+  },
+  {
+    name: 'onenote_create_page',
+    description: 'Create a new page in a section',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        sectionId: { type: 'string', description: 'The section ID' },
+        title: { type: 'string', description: 'Page title' },
+        content: { type: 'string', description: 'Page content (HTML)' },
+      },
+      required: ['sectionId', 'title', 'content'],
+    },
+  },
+  {
+    name: 'onenote_append_to_page',
+    description: 'Append content to an existing OneNote page',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        pageId: { type: 'string', description: 'The page ID' },
+        content: { type: 'string', description: 'Content to append (HTML)' },
+      },
+      required: ['pageId', 'content'],
+    },
+  },
+  {
+    name: 'onenote_search_pages',
+    description: 'Search pages across all notebooks',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Search query string' },
+        top: { type: 'number', description: 'Number of results (default: 20)' },
+      },
+      required: ['query'],
+    },
+  },
+  {
+    name: 'onenote_delete_page',
+    description: 'Delete a OneNote page',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        pageId: { type: 'string', description: 'The page ID to delete' },
+      },
+      required: ['pageId'],
+    },
+  },
+  {
+    name: 'onenote_delete_section',
+    description: 'Delete a OneNote section',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        sectionId: { type: 'string', description: 'The section ID to delete' },
+      },
+      required: ['sectionId'],
+    },
+  },
+  {
+    name: 'onenote_delete_notebook',
+    description: 'Delete a OneNote notebook',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        notebookId: { type: 'string', description: 'The notebook ID to delete' },
+      },
+      required: ['notebookId'],
+    },
+  },
+  {
+    name: 'onenote_copy_page',
+    description: 'Copy a page to a different section',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        pageId: { type: 'string', description: 'The page ID to copy' },
+        targetSectionId: { type: 'string', description: 'The target section ID' },
+      },
+      required: ['pageId', 'targetSectionId'],
+    },
+  },
 ];
 
 // Initialize MCP server
@@ -461,6 +648,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const teams = new TeamsTools(graphClient, userId);
     const excel = new ExcelTools(graphClient, userId);
     const word = new WordTools(graphClient, userId);
+    const onenote = new OneNoteTools(graphClient, userId);
 
     let result: any;
 
@@ -593,6 +781,60 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         break;
       case 'word_convert_to_pdf':
         result = await word.convertToPdf((args as any).itemId);
+        break;
+
+      // OneNote Tools
+      case 'onenote_list_notebooks':
+        result = await onenote.listNotebooks(args as any);
+        break;
+      case 'onenote_get_notebook':
+        result = await onenote.getNotebook((args as any).notebookId);
+        break;
+      case 'onenote_create_notebook':
+        result = await onenote.createNotebook((args as any).displayName);
+        break;
+      case 'onenote_list_sections':
+        result = await onenote.listSections(args as any);
+        break;
+      case 'onenote_get_section':
+        result = await onenote.getSection((args as any).sectionId);
+        break;
+      case 'onenote_create_section':
+        result = await onenote.createSection((args as any).notebookId, (args as any).displayName);
+        break;
+      case 'onenote_list_pages':
+        result = await onenote.listPages(args as any);
+        break;
+      case 'onenote_get_page':
+        result = await onenote.getPage((args as any).pageId);
+        break;
+      case 'onenote_get_page_content':
+        result = await onenote.getPageContent((args as any).pageId);
+        break;
+      case 'onenote_create_page':
+        result = await onenote.createPage((args as any).sectionId, (args as any).title, (args as any).content);
+        break;
+      case 'onenote_append_to_page':
+        await onenote.appendToPage((args as any).pageId, (args as any).content);
+        result = { success: true, message: 'Content appended successfully' };
+        break;
+      case 'onenote_search_pages':
+        result = await onenote.searchPages((args as any).query, (args as any).top);
+        break;
+      case 'onenote_delete_page':
+        await onenote.deletePage((args as any).pageId);
+        result = { success: true, message: 'Page deleted successfully' };
+        break;
+      case 'onenote_delete_section':
+        await onenote.deleteSection((args as any).sectionId);
+        result = { success: true, message: 'Section deleted successfully' };
+        break;
+      case 'onenote_delete_notebook':
+        await onenote.deleteNotebook((args as any).notebookId);
+        result = { success: true, message: 'Notebook deleted successfully' };
+        break;
+      case 'onenote_copy_page':
+        result = await onenote.copyPage((args as any).pageId, (args as any).targetSectionId);
         break;
 
       default:
