@@ -91,10 +91,12 @@ Add these permissions:
 - TeamSettings.Read.All
 - TeamSettings.ReadWrite.All
 - ChannelMessage.Read.All
-- ChannelMessage.Send
+- Group.ReadWrite.All (required for sending channel messages)
 
 **User Permissions:**
 - User.Read.All
+
+> **Note**: `Group.ReadWrite.All` is required for application permissions to send messages to Teams channels. For delegated permissions (user context), you can use `ChannelMessage.Send` instead.
 
 ### Step 5: Grant Admin Consent
 

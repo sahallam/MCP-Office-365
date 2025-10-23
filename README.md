@@ -96,7 +96,7 @@ Add the following Microsoft Graph API permissions:
 - `TeamSettings.Read.All`
 - `TeamSettings.ReadWrite.All`
 - `ChannelMessage.Read.All`
-- `ChannelMessage.Send`
+- `Group.ReadWrite.All` (required for sending Teams channel messages)
 - `User.Read.All`
 
 **Delegated Permissions** (for user context):
@@ -109,8 +109,16 @@ Add the following Microsoft Graph API permissions:
 - `Files.ReadWrite`
 - `Sites.Read.All`
 - `Sites.ReadWrite.All`
+- `ChannelMessage.Send` (for sending Teams messages as the user)
+- `Team.ReadBasic.All`
+- `Channel.ReadBasic.All`
 
 After adding permissions, click **Grant admin consent** for your organization.
+
+> **Important Note on Teams Permissions**:
+> - `Group.ReadWrite.All` is a broad permission that allows reading and writing to all Microsoft 365 groups and teams
+> - For production use, consider using Resource-Specific Consent (RSC) or Teams Bot Framework for more granular control
+> - Delegated permissions with `ChannelMessage.Send` provide better security when running on behalf of a specific user
 
 ### 3. Create Client Secret
 
