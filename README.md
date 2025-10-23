@@ -134,7 +134,7 @@ After adding permissions, click **Grant admin consent** for your organization.
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/office365-mcp-server.git
+git clone https://github.com/sahallam/office365-mcp-server.git
 cd office365-mcp-server
 
 # Install dependencies
@@ -197,7 +197,7 @@ Add this to your Claude Desktop configuration file:
 ```json
 {
   "mcpServers": {
-    "office365": {
+    "Office 365": {
       "command": "node",
       "args": ["/absolute/path/to/office365-mcp-server/dist/index.js"],
       "env": {
@@ -409,6 +409,7 @@ For issues and questions:
 
 ## Acknowledgments
 
+- Developed by Claude Code, prompted by Steven Hallam.
 - Built with the [Model Context Protocol SDK](https://github.com/modelcontextprotocol)
 - Uses [Microsoft Graph API](https://developer.microsoft.com/en-us/graph)
 - Inspired by the [Google Cloud MCP Server](https://github.com/googleapis/gcloud-mcp)
