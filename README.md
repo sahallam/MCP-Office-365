@@ -375,7 +375,7 @@ DEBUG=* npm start
 
 ## Limitations
 
-- **Rate Limits**: Microsoft Graph API has rate limits (throttling)
+- **Rate Limits**: Microsoft Graph API has rate limits (throttling). The server does not currently implement automatic retry logic for 429 (Too Many Requests) errors. For typical interactive use through Claude, the rate limits are generous enough that throttling is unlikely. If you encounter rate limiting during high-volume operations, you may need to add retry logic or reduce request frequency.
 - **File Size**: Large file operations may timeout
 - **Permissions**: Some operations require specific permissions
 - **Delegated vs Application**: Some features work differently with app-only vs delegated permissions
