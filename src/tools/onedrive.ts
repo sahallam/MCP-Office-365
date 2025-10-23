@@ -4,7 +4,6 @@
 
 import { Client } from '@microsoft/microsoft-graph-client';
 import { DriveItem } from '../types.js';
-import { Readable } from 'stream';
 
 export class OneDriveTools {
   constructor(private graphClient: Client, private userId: string) {}
