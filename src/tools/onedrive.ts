@@ -69,9 +69,23 @@ export class OneDriveTools {
       ? `/users/${this.userId}/drive/items/${parentFolderId}:/${fileName}:/content`
       : `/users/${this.userId}/drive/root:/${fileName}:/content`;
 
+    // Convert base64 string to Buffer if needed
+    let uploadContent: Buffer;
+    if (typeof content === 'string') {
+      // Try to decode as base64, fallback to UTF-8 if it fails
+      try {
+        uploadContent = Buffer.from(content, 'base64');
+      } catch (error) {
+        // If base64 decode fails, treat as plain text
+        uploadContent = Buffer.from(content, 'utf-8');
+      }
+    } else {
+      uploadContent = content;
+    }
+
     const uploadedFile = await this.graphClient
       .api(endpoint)
-      .put(content);
+      .put(uploadContent);
 
     return uploadedFile;
   }
