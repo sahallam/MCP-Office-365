@@ -464,6 +464,7 @@ const server = new Server(
 
 // Handle tool list request
 server.setRequestHandler(ListToolsRequestSchema, async () => {
+  console.error(`[MCP] Returning ${TOOLS.length} tools to client`);
   return { tools: TOOLS };
 });
 
@@ -645,9 +646,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
 // Start the server
 async function main() {
+  console.error(`[MCP] Server handlers registered, ${TOOLS.length} tools defined`);
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error('Office365 MCP Server running on stdio');
+  console.error('[MCP] Office365 MCP Server running on stdio');
 }
 
 main().catch((error) => {
