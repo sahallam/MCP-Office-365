@@ -70,6 +70,28 @@ This code was developed by Claude Code.
 2. **Required Permissions**: The application needs appropriate Microsoft Graph API permissions
 3. **Node.js**: Version 18.0.0 or higher
 
+## Authentication Modes
+
+This server supports two authentication modes:
+
+### 1. Delegated Authentication (Recommended)
+- Uses **device code flow** for user authentication
+- User signs in with their Microsoft account
+- **Required for**: Teams, OneNote (after March 31, 2025)
+- **Best for**: Interactive scenarios where a user can authenticate
+- **Does NOT require**: CLIENT_SECRET
+- Tokens are cached and automatically refreshed
+
+### 2. App-Only Authentication
+- Uses **client credentials flow** (application-only)
+- No user interaction required
+- **Required for**: Automation scenarios
+- **Requires**: CLIENT_SECRET, USER_PRINCIPAL_NAME or USER_ID
+- Works for Outlook, Calendar, OneDrive, SharePoint
+- **Limited support**: Teams (some features), OneNote (deprecated March 31, 2025)
+
+**For most use cases with Claude Desktop, use Delegated Authentication.**
+
 ## Setup
 
 ### 1. Microsoft Entra ID Application Registration
@@ -81,11 +103,39 @@ This code was developed by Claude Code.
 5. Select **Accounts in this organizational directory only**
 6. Click **Register**
 
+**For Delegated Authentication (Device Code Flow):**
+7. Go to **Authentication** > **Advanced settings**
+8. Set **Allow public client flows** to **Yes**
+9. Click **Save**
+
 ### 2. Configure API Permissions
 
-Add the following Microsoft Graph API permissions:
+Choose the permissions based on your authentication mode:
 
-**Application Permissions** (for app-only access):
+#### For Delegated Authentication (Recommended)
+
+Add these **Delegated Permissions**:
+- `User.Read`
+- `Mail.ReadWrite`
+- `Mail.Send`
+- `Calendars.ReadWrite`
+- `Files.ReadWrite.All`
+- `Notes.ReadWrite.All` (for OneNote)
+- `Team.ReadBasic.All`
+- `Channel.ReadBasic.All`
+- `ChannelMessage.Read.All`
+- `Chat.Read`
+- `Chat.ReadWrite`
+- `Sites.Read.All`
+- `Sites.ReadWrite.All`
+
+After adding permissions, click **Grant admin consent** for your organization.
+
+> **Note**: With delegated auth, the user will be prompted to consent to these permissions when they first sign in via device code flow.
+
+#### For App-Only Authentication
+
+Add these **Application Permissions**:
 - `Mail.Read`
 - `Mail.ReadWrite`
 - `Mail.Send`
@@ -98,31 +148,16 @@ Add the following Microsoft Graph API permissions:
 - `TeamSettings.Read.All`
 - `TeamSettings.ReadWrite.All`
 - `ChannelMessage.Read.All`
-- `Group.ReadWrite.All` (required for sending Teams channel messages)
+- `Group.ReadWrite.All` (required for Teams operations)
 - `User.Read.All`
-
-**Delegated Permissions** (for user context):
-- `Mail.Read`
-- `Mail.ReadWrite`
-- `Mail.Send`
-- `Calendars.Read`
-- `Calendars.ReadWrite`
-- `Files.Read`
-- `Files.ReadWrite`
-- `Sites.Read.All`
-- `Sites.ReadWrite.All`
-- `ChannelMessage.Send` (for sending Teams messages as the user)
-- `Team.ReadBasic.All`
-- `Channel.ReadBasic.All`
 
 After adding permissions, click **Grant admin consent** for your organization.
 
-> **Important Note on Teams Permissions**:
-> - `Group.ReadWrite.All` is a broad permission that allows reading and writing to all Microsoft 365 groups and teams
-> - For production use, consider using Resource-Specific Consent (RSC) or Teams Bot Framework for more granular control
-> - Delegated permissions with `ChannelMessage.Send` provide better security when running on behalf of a specific user
+> **Important**: App-only mode has limited Teams support and OneNote will stop working on March 31, 2025.
 
-### 3. Create Client Secret
+### 3. Create Client Secret (App-Only Mode Only)
+
+**Only required if using app-only authentication. Skip this step for delegated authentication.**
 
 1. In your app registration, go to **Certificates & secrets**
 2. Click **New client secret**
@@ -152,14 +187,28 @@ Create a `.env` file in the root directory:
 cp .env.example .env
 ```
 
-Edit the `.env` file with your Microsoft Entra ID application details:
+Edit the `.env` file based on your authentication mode:
+
+#### For Delegated Authentication (Recommended)
+
+```env
+TENANT_ID=your-tenant-id
+CLIENT_ID=your-client-id
+AUTH_MODE=delegated
+
+# Optional: Custom Graph API endpoint
+# GRAPH_API_ENDPOINT=https://graph.microsoft.com/v1.0
+```
+
+#### For App-Only Authentication
 
 ```env
 TENANT_ID=your-tenant-id
 CLIENT_ID=your-client-id
 CLIENT_SECRET=your-client-secret
+AUTH_MODE=app-only
 
-# Optional: Specify a user to act on behalf of
+# Required for app-only mode - specify a user to act on behalf of
 USER_PRINCIPAL_NAME=user@yourdomain.com
 # Or use user ID
 # USER_ID=user-object-id
@@ -171,7 +220,7 @@ USER_PRINCIPAL_NAME=user@yourdomain.com
 To find these values:
 - **TENANT_ID**: In Azure Portal > Microsoft Entra ID > Overview > Tenant ID
 - **CLIENT_ID**: In your app registration > Overview > Application (client) ID
-- **CLIENT_SECRET**: The value you copied when creating the client secret
+- **CLIENT_SECRET**: (App-only only) The value you copied when creating the client secret
 
 ## Usage
 
@@ -194,16 +243,43 @@ Add this to your Claude Desktop configuration file:
 **On macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 **On Windows**: `%APPDATA%/Claude/claude_desktop_config.json`
 
+#### Delegated Authentication (Recommended)
+
 ```json
 {
   "mcpServers": {
     "Office 365": {
       "command": "node",
-      "args": ["/absolute/path/to/office365-mcp-server/dist/index.js"],
+      "args": ["/absolute/path/to/MCP-Office-365/dist/index.js"],
+      "env": {
+        "TENANT_ID": "your-tenant-id",
+        "CLIENT_ID": "your-client-id",
+        "AUTH_MODE": "delegated"
+      }
+    }
+  }
+}
+```
+
+**First-time setup**: When you start Claude Desktop, check the logs for device code authentication instructions. You'll see a URL and code to enter in your browser to sign in.
+
+**Logs location**:
+- macOS: `~/Library/Logs/Claude/mcp*.log`
+- Windows: `%APPDATA%\Claude\logs\mcp*.log`
+
+#### App-Only Authentication
+
+```json
+{
+  "mcpServers": {
+    "Office 365": {
+      "command": "node",
+      "args": ["/absolute/path/to/MCP-Office-365/dist/index.js"],
       "env": {
         "TENANT_ID": "your-tenant-id",
         "CLIENT_ID": "your-client-id",
         "CLIENT_SECRET": "your-client-secret",
+        "AUTH_MODE": "app-only",
         "USER_PRINCIPAL_NAME": "user@yourdomain.com"
       }
     }
@@ -296,14 +372,27 @@ office365-mcp-server/
 └── README.md
 ```
 
-### Authentication Flow
+### Authentication Flows
 
-The server uses the **Client Credentials Flow** (app-only authentication):
+The server supports two authentication flows:
+
+#### Delegated Authentication (Device Code Flow)
+
+1. Server starts and checks for cached access token
+2. If no valid token exists, prompts user with a device code
+3. User opens browser, navigates to the URL, and enters the code
+4. User signs in and grants consent to requested permissions
+5. Server receives access token and refresh token
+6. Tokens are cached locally in `.token-cache.json`
+7. For subsequent requests, tokens are automatically refreshed using MSAL cache
+8. User only needs to authenticate once (until token expires)
+
+#### App-Only Authentication (Client Credentials Flow)
 
 1. Server loads credentials from environment variables
-2. Authenticates with Microsoft Entra ID using MSAL (Microsoft Authentication Library)
+2. Authenticates with Microsoft Entra ID using client secret
 3. Obtains an access token for Microsoft Graph API
-4. Uses the token for all API requests
+4. Uses the token for all API requests on behalf of the specified user
 5. Automatically refreshes the token when it expires
 
 > **Note**: While Microsoft rebranded Azure AD to Microsoft Entra ID, authentication endpoints and some API references still use the `login.microsoftonline.com` domain for backwards compatibility.
@@ -343,15 +432,24 @@ The codebase is organized into modular components:
 
 ### Common Issues
 
-**Authentication Errors**
+**Delegated Authentication Issues**
+- **"Allow public client flows" not enabled**: Go to Azure Portal > Your App > Authentication > Advanced settings > Set to "Yes"
+- **Can't see device code**: Check Claude Desktop logs at `~/Library/Logs/Claude/mcp*.log` (macOS) or `%APPDATA%\Claude\logs\` (Windows)
+- **Token expired**: Delete `.token-cache.json` and restart to re-authenticate
+- **Wrong permissions**: Ensure delegated permissions (not application permissions) are configured in Azure Portal
+
+**App-Only Authentication Errors**
 - Verify your `TENANT_ID`, `CLIENT_ID`, and `CLIENT_SECRET` are correct
-- Ensure admin consent has been granted for the required permissions
+- Ensure `USER_PRINCIPAL_NAME` or `USER_ID` is specified
+- Ensure admin consent has been granted for application permissions
 - Check that the client secret hasn't expired
+- **Teams/OneNote not working**: These require delegated authentication - set `AUTH_MODE=delegated`
 
 **Permission Errors**
-- Verify the app has the necessary Graph API permissions
+- Verify the app has the necessary Graph API permissions (delegated vs application)
 - Ensure admin consent has been granted
 - Check if the user/app has access to the requested resources
+- For delegated auth, user must have the necessary roles/permissions
 
 **Connection Issues**
 - Verify your network allows connections to `https://login.microsoftonline.com` and `https://graph.microsoft.com`
@@ -367,18 +465,23 @@ DEBUG=* npm start
 
 ## Security Considerations
 
-- **Never commit** your `.env` file or expose credentials
-- **Rotate client secrets** regularly
+- **Never commit** your `.env` file or `.token-cache.json` to version control
+- **Token cache**: The `.token-cache.json` file contains access tokens - keep it secure
+- **Rotate client secrets** regularly (app-only mode)
 - **Use least privilege**: Only grant necessary permissions
 - **Monitor access**: Review Microsoft Entra ID sign-in logs regularly
 - **Secure storage**: Store credentials securely (use Azure Key Vault in production)
+- **Delegated auth**: Tokens are tied to the signed-in user - ensure the user has appropriate access
 
 ## Limitations
 
 - **Rate Limits**: Microsoft Graph API has rate limits (throttling)
 - **File Size**: Large file operations may timeout
 - **Permissions**: Some operations require specific permissions
-- **Delegated vs Application**: Some features work differently with app-only vs delegated permissions
+- **Authentication Mode Restrictions**:
+  - **App-only**: Limited Teams support, OneNote deprecated (March 31, 2025)
+  - **Delegated**: Requires user to authenticate via browser (device code flow)
+- **Token Lifetime**: Delegated auth tokens expire and require re-authentication periodically
 
 ## Contributing
 
