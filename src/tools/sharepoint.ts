@@ -82,9 +82,19 @@ export class SharePointTools {
       ? `/sites/${siteId}/drives/${driveId}/items/${parentFolderId}:/${fileName}:/content`
       : `/sites/${siteId}/drives/${driveId}/root:/${fileName}:/content`;
 
+    // Convert base64 string to Buffer if needed
+    let uploadContent: Buffer;
+    if (typeof content === 'string') {
+      // Assume base64 encoding for string content
+      uploadContent = Buffer.from(content, 'base64');
+    } else {
+      uploadContent = content;
+    }
+
     const uploadedFile = await this.graphClient
       .api(endpoint)
-      .put(content);
+      .header('Content-Type', 'application/octet-stream')
+      .put(uploadContent);
 
     return uploadedFile;
   }
