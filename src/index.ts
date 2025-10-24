@@ -37,6 +37,15 @@ for (const envVar of requiredEnvVars) {
   }
 }
 
+// Validate that either USER_PRINCIPAL_NAME or USER_ID is provided
+// Required for app-only authentication (Client Credentials flow)
+if (!process.env.USER_PRINCIPAL_NAME && !process.env.USER_ID) {
+  console.error('Error: Either USER_PRINCIPAL_NAME or USER_ID must be specified');
+  console.error('App-only authentication requires a specific user to act on behalf of');
+  console.error('Example: USER_PRINCIPAL_NAME=user@yourdomain.com');
+  process.exit(1);
+}
+
 // Configure Graph API
 const config: GraphConfig = {
   tenantId: process.env.TENANT_ID!,
