@@ -13,7 +13,7 @@ export class TeamsTools {
    */
   async listTeams(): Promise<any[]> {
     const result = await this.graphClient
-      .api('/me/joinedTeams')
+      .api(`/users/${this.userId}/joinedTeams`)
       .get();
 
     return result.value;
@@ -206,7 +206,7 @@ export class TeamsTools {
    */
   async listChats(): Promise<any[]> {
     const result = await this.graphClient
-      .api('/me/chats')
+      .api(`/users/${this.userId}/chats`)
       .get();
 
     return result.value;
