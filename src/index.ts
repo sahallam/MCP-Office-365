@@ -29,8 +29,11 @@ import { GraphConfig } from './types.js';
 // Load environment variables
 dotenv.config();
 
+// Determine authentication mode
+const authMode = (process.env.AUTH_MODE || 'app-only') as 'app-only' | 'delegated';
+
 // Validate required environment variables
-const requiredEnvVars = ['TENANT_ID', 'CLIENT_ID', 'CLIENT_SECRET'];
+const requiredEnvVars = ['TENANT_ID', 'CLIENT_ID'];
 for (const envVar of requiredEnvVars) {
   if (!process.env[envVar]) {
     console.error(`Error: ${envVar} environment variable is required`);
@@ -38,15 +41,35 @@ for (const envVar of requiredEnvVars) {
   }
 }
 
+// For app-only auth, CLIENT_SECRET is required
+if (authMode === 'app-only' && !process.env.CLIENT_SECRET) {
+  console.error('Error: CLIENT_SECRET is required for app-only authentication');
+  console.error('Set AUTH_MODE=delegated to use delegated authentication instead');
+  process.exit(1);
+}
+
+// For app-only auth, either USER_PRINCIPAL_NAME or USER_ID is required
+if (authMode === 'app-only' && !process.env.USER_PRINCIPAL_NAME && !process.env.USER_ID) {
+  console.error('Error: Either USER_PRINCIPAL_NAME or USER_ID must be specified for app-only authentication');
+  console.error('Example: USER_PRINCIPAL_NAME=user@yourdomain.com');
+  console.error('Or set AUTH_MODE=delegated to use delegated authentication');
+  process.exit(1);
+}
+
 // Configure Graph API
 const config: GraphConfig = {
   tenantId: process.env.TENANT_ID!,
   clientId: process.env.CLIENT_ID!,
-  clientSecret: process.env.CLIENT_SECRET!,
+  clientSecret: process.env.CLIENT_SECRET,
   graphEndpoint: process.env.GRAPH_API_ENDPOINT || 'https://graph.microsoft.com/v1.0',
   userPrincipalName: process.env.USER_PRINCIPAL_NAME,
   userId: process.env.USER_ID,
+  authMode,
+  tokenCachePath: process.env.TOKEN_CACHE_PATH,
 };
+
+// Log authentication mode
+console.error(`Office365 MCP Server starting with ${authMode} authentication...`);
 
 // Initialize auth provider
 const authProvider = new GraphAuthProvider(config);

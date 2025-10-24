@@ -5,10 +5,12 @@
 export interface GraphConfig {
   tenantId: string;
   clientId: string;
-  clientSecret: string;
+  clientSecret?: string;
   graphEndpoint: string;
   userPrincipalName?: string;
   userId?: string;
+  authMode?: 'app-only' | 'delegated';
+  tokenCachePath?: string;
 }
 
 export interface EmailMessage {

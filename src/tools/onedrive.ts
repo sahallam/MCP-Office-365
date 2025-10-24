@@ -72,19 +72,15 @@ export class OneDriveTools {
     // Convert base64 string to Buffer if needed
     let uploadContent: Buffer;
     if (typeof content === 'string') {
-      // Try to decode as base64, fallback to UTF-8 if it fails
-      try {
-        uploadContent = Buffer.from(content, 'base64');
-      } catch (error) {
-        // If base64 decode fails, treat as plain text
-        uploadContent = Buffer.from(content, 'utf-8');
-      }
+      // Assume base64 encoding for string content
+      uploadContent = Buffer.from(content, 'base64');
     } else {
       uploadContent = content;
     }
 
     const uploadedFile = await this.graphClient
       .api(endpoint)
+      .header('Content-Type', 'application/octet-stream')
       .put(uploadContent);
 
     return uploadedFile;
