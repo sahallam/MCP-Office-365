@@ -1,6 +1,6 @@
 # Office365 MCP Server
 
-A comprehensive [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server for Microsoft Office 365 integration. This server enables AI assistants like Claude to interact with your Office 365 environment, including Outlook, Calendar, OneDrive, SharePoint, Teams, Excel, and Word. 
+A comprehensive [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server for Microsoft Office 365 integration. This server enables AI assistants like Claude to interact with your Office 365 environment, including Outlook, Calendar, OneDrive, SharePoint, Teams, Excel, Word, and OneNote. 
 
 This code was developed by Claude Code.
 
@@ -64,6 +64,16 @@ This code was developed by Claude Code.
 - Check out/check in documents
 - Share documents
 
+### OneNote
+- List and manage notebooks
+- Create and delete notebooks
+- List and manage sections
+- Create and delete sections
+- List, create, and delete pages
+- Get and append page content (HTML)
+- Search pages across all notebooks
+- Copy pages between sections
+
 ## Prerequisites
 
 1. **Microsoft Entra ID Application**: You need to register an application in Microsoft Entra ID (formerly Azure Active Directory)
@@ -99,6 +109,8 @@ Add the following Microsoft Graph API permissions:
 - `TeamSettings.ReadWrite.All`
 - `ChannelMessage.Read.All`
 - `Group.ReadWrite.All` (required for sending Teams channel messages)
+- `Notes.Read.All`
+- `Notes.ReadWrite.All`
 - `User.Read.All`
 
 **Delegated Permissions** (for user context):
@@ -114,6 +126,9 @@ Add the following Microsoft Graph API permissions:
 - `ChannelMessage.Send` (for sending Teams messages as the user)
 - `Team.ReadBasic.All`
 - `Channel.ReadBasic.All`
+- `Notes.Read`
+- `Notes.ReadWrite`
+- `Notes.Create`
 
 After adding permissions, click **Grant admin consent** for your organization.
 
@@ -259,6 +274,24 @@ The server provides the following MCP tools:
 - `word_search_documents` - Search for documents
 - `word_convert_to_pdf` - Convert document to PDF
 
+#### OneNote Tools
+- `onenote_list_notebooks` - List all OneNote notebooks
+- `onenote_get_notebook` - Get a specific notebook by ID
+- `onenote_create_notebook` - Create a new notebook
+- `onenote_list_sections` - List sections in a notebook or all sections
+- `onenote_get_section` - Get a specific section by ID
+- `onenote_create_section` - Create a new section in a notebook
+- `onenote_list_pages` - List pages in a section, notebook, or all pages
+- `onenote_get_page` - Get a specific page by ID
+- `onenote_get_page_content` - Get the HTML content of a page
+- `onenote_create_page` - Create a new page in a section
+- `onenote_append_to_page` - Append content to an existing page
+- `onenote_search_pages` - Search pages across all notebooks
+- `onenote_delete_page` - Delete a OneNote page
+- `onenote_delete_section` - Delete a OneNote section
+- `onenote_delete_notebook` - Delete a OneNote notebook
+- `onenote_copy_page` - Copy a page to a different section
+
 ## Example Prompts
 
 Once configured, you can use prompts like these with Claude:
@@ -271,6 +304,10 @@ Once configured, you can use prompts like these with Claude:
 - "Search for Excel files containing 'budget'"
 - "Send a message to the Marketing team channel saying 'Great work everyone!'"
 - "Read the data from cells A1:C10 in the Sales worksheet"
+- "List all my OneNote notebooks"
+- "Create a new OneNote page titled 'Meeting Notes' in my Work section"
+- "Search my OneNote pages for 'project timeline'"
+- "Show me the content of my latest OneNote page"
 
 ## Architecture
 
@@ -289,7 +326,8 @@ office365-mcp-server/
 │       ├── sharepoint.ts     # SharePoint operations
 │       ├── teams.ts          # Teams operations
 │       ├── excel.ts          # Excel operations
-│       └── word.ts           # Word operations
+│       ├── word.ts           # Word operations
+│       └── onenote.ts        # OneNote operations
 ├── package.json
 ├── tsconfig.json
 ├── .env.example
