@@ -477,6 +477,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const graphClient = await authProvider.getGraphClient();
     const userId = authProvider.getUserId();
 
+    console.error(`[MCP] Tool called: ${name}, userId: ${userId}`);
+
     // Initialize tool classes
     const outlook = new OutlookTools(graphClient, userId);
     const calendar = new CalendarTools(graphClient, userId);
