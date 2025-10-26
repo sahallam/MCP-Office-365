@@ -12,6 +12,7 @@ build/
 
 # Token cache (delegated auth)
 .token-cache.json
+.office365-mcp-token-cache.json
 
 # Logs
 logs/

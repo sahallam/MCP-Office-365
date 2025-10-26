@@ -7,6 +7,7 @@ import { Client } from '@microsoft/microsoft-graph-client';
 import { GraphConfig } from './types.js';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 
 interface TokenCache {
   accessToken: string;
@@ -25,12 +26,15 @@ export class GraphAuthProvider {
 
   constructor(config: GraphConfig) {
     this.config = config;
-    this.tokenCachePath = config.tokenCachePath || path.join(process.cwd(), '.token-cache.json');
+    // Use home directory for token cache to avoid permission issues when running from system directories
+    this.tokenCachePath = config.tokenCachePath || path.join(os.homedir(), '.office365-mcp-token-cache.json');
 
     // Determine authentication mode
     const authMode = config.authMode || 'app-only';
 
     if (authMode === 'delegated') {
+      console.error(`[AUTH] Token cache location: ${this.tokenCachePath}`);
+
       // Use Public Client Application for delegated auth (device code flow)
       this.msalClient = new PublicClientApplication({
         auth: {
@@ -68,11 +72,13 @@ export class GraphAuthProvider {
           this.accessToken = cache.accessToken;
           this.tokenExpiry = new Date(cache.expiresOn);
           this.userAccount = cache.account;
-          console.error('Loaded cached access token');
+          console.error('[AUTH] Loaded cached access token');
+        } else {
+          console.error('[AUTH] Cached token expired, will re-authenticate');
         }
       }
     } catch (error) {
-      console.error('Failed to load cached tokens:', error);
+      console.error('[AUTH] Failed to load cached tokens:', error);
     }
   }
 
@@ -88,9 +94,9 @@ export class GraphAuthProvider {
         account,
       };
       fs.writeFileSync(this.tokenCachePath, JSON.stringify(cache, null, 2));
-      console.error('Saved tokens to cache');
+      console.error(`[AUTH] Saved tokens to cache: ${this.tokenCachePath}`);
     } catch (error) {
-      console.error('Failed to save tokens to cache:', error);
+      console.error(`[AUTH] Failed to save tokens to cache (${this.tokenCachePath}):`, error);
     }
   }
 
