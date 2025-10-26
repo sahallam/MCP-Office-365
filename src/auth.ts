@@ -243,15 +243,20 @@ export class GraphAuthProvider {
   getUserId(): string {
     const authMode = this.config.authMode || 'app-only';
 
+    console.error(`[AUTH] getUserId called, authMode: ${authMode}`);
+
     if (authMode === 'delegated') {
       // In delegated mode, always use 'me' for the authenticated user
+      console.error(`[AUTH] Returning 'me' for delegated auth`);
       return 'me';
     } else {
       // In app-only mode, must specify which user to act on behalf of
       if (this.config.userId) {
+        console.error(`[AUTH] Returning userId: ${this.config.userId}`);
         return this.config.userId;
       }
       if (this.config.userPrincipalName) {
+        console.error(`[AUTH] Returning userPrincipalName: ${this.config.userPrincipalName}`);
         return this.config.userPrincipalName;
       }
       throw new Error('USER_PRINCIPAL_NAME or USER_ID must be specified for app-only authentication');
