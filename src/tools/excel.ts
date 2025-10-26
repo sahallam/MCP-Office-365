@@ -9,11 +9,19 @@ export class ExcelTools {
   constructor(private graphClient: Client, private userId: string) {}
 
   /**
+   * Get the correct user path for API endpoints
+   * Returns '/me' if userId is 'me', otherwise '/users/{userId}'
+   */
+  private getUserPath(): string {
+    return this.userId === 'me' ? '/me' : `/users/${this.userId}`;
+  }
+
+  /**
    * Get workbook metadata
    */
   async getWorkbook(itemId: string): Promise<ExcelWorkbook> {
     const workbook = await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}/workbook`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}/workbook`)
       .get();
 
     return workbook;
@@ -24,7 +32,7 @@ export class ExcelTools {
    */
   async listWorksheets(itemId: string): Promise<ExcelWorksheet[]> {
     const result = await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}/workbook/worksheets`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}/workbook/worksheets`)
       .get();
 
     return result.value;
@@ -35,7 +43,7 @@ export class ExcelTools {
    */
   async getWorksheet(itemId: string, worksheetId: string): Promise<ExcelWorksheet> {
     const worksheet = await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}/workbook/worksheets/${worksheetId}`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}/workbook/worksheets/${worksheetId}`)
       .get();
 
     return worksheet;
@@ -46,7 +54,7 @@ export class ExcelTools {
    */
   async createWorksheet(itemId: string, name: string): Promise<ExcelWorksheet> {
     const worksheet = await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}/workbook/worksheets/add`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}/workbook/worksheets/add`)
       .post({
         name,
       });
@@ -59,7 +67,7 @@ export class ExcelTools {
    */
   async getRange(itemId: string, worksheetId: string, address: string): Promise<any> {
     const range = await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}/workbook/worksheets/${worksheetId}/range(address='${address}')`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}/workbook/worksheets/${worksheetId}/range(address='${address}')`)
       .get();
 
     return range;
@@ -70,7 +78,7 @@ export class ExcelTools {
    */
   async updateRange(itemId: string, worksheetId: string, address: string, values: any[][]): Promise<any> {
     const range = await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}/workbook/worksheets/${worksheetId}/range(address='${address}')`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}/workbook/worksheets/${worksheetId}/range(address='${address}')`)
       .patch({
         values,
       });
@@ -83,7 +91,7 @@ export class ExcelTools {
    */
   async getUsedRange(itemId: string, worksheetId: string): Promise<any> {
     const range = await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}/workbook/worksheets/${worksheetId}/usedRange`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}/workbook/worksheets/${worksheetId}/usedRange`)
       .get();
 
     return range;
@@ -94,7 +102,7 @@ export class ExcelTools {
    */
   async createTable(itemId: string, worksheetId: string, address: string, hasHeaders: boolean = true): Promise<any> {
     const table = await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}/workbook/worksheets/${worksheetId}/tables/add`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}/workbook/worksheets/${worksheetId}/tables/add`)
       .post({
         address,
         hasHeaders,
@@ -108,7 +116,7 @@ export class ExcelTools {
    */
   async listTables(itemId: string, worksheetId: string): Promise<any[]> {
     const result = await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}/workbook/worksheets/${worksheetId}/tables`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}/workbook/worksheets/${worksheetId}/tables`)
       .get();
 
     return result.value;
@@ -119,7 +127,7 @@ export class ExcelTools {
    */
   async getTableData(itemId: string, tableId: string): Promise<any> {
     const result = await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}/workbook/tables/${tableId}/rows`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}/workbook/tables/${tableId}/rows`)
       .get();
 
     return result.value;
@@ -130,7 +138,7 @@ export class ExcelTools {
    */
   async addTableRows(itemId: string, tableId: string, values: any[][]): Promise<any> {
     const result = await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}/workbook/tables/${tableId}/rows/add`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}/workbook/tables/${tableId}/rows/add`)
       .post({
         values,
       });
@@ -143,7 +151,7 @@ export class ExcelTools {
    */
   async listNamedItems(itemId: string): Promise<any[]> {
     const result = await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}/workbook/names`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}/workbook/names`)
       .get();
 
     return result.value;
@@ -154,7 +162,7 @@ export class ExcelTools {
    */
   async getNamedRange(itemId: string, name: string): Promise<any> {
     const range = await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}/workbook/names/${name}/range`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}/workbook/names/${name}/range`)
       .get();
 
     return range;
@@ -171,7 +179,7 @@ export class ExcelTools {
     seriesBy: 'Auto' | 'Columns' | 'Rows' = 'Auto'
   ): Promise<any> {
     const chart = await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}/workbook/worksheets/${worksheetId}/charts/add`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}/workbook/worksheets/${worksheetId}/charts/add`)
       .post({
         type,
         sourceData,
@@ -186,7 +194,7 @@ export class ExcelTools {
    */
   async listCharts(itemId: string, worksheetId: string): Promise<any[]> {
     const result = await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}/workbook/worksheets/${worksheetId}/charts`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}/workbook/worksheets/${worksheetId}/charts`)
       .get();
 
     return result.value;
@@ -197,7 +205,7 @@ export class ExcelTools {
    */
   async refreshData(itemId: string): Promise<void> {
     await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}/workbook/refreshAllDataConnections`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}/workbook/refreshAllDataConnections`)
       .post({});
   }
 
@@ -206,7 +214,7 @@ export class ExcelTools {
    */
   async createSession(itemId: string, persistChanges: boolean = true): Promise<string> {
     const session = await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}/workbook/createSession`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}/workbook/createSession`)
       .post({
         persistChanges,
       });
@@ -219,7 +227,7 @@ export class ExcelTools {
    */
   async closeSession(itemId: string, sessionId: string): Promise<void> {
     await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}/workbook/closeSession`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}/workbook/closeSession`)
       .header('workbook-session-id', sessionId)
       .post({});
   }

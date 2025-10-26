@@ -9,11 +9,19 @@ export class TeamsTools {
   constructor(private graphClient: Client, private userId: string) {}
 
   /**
+   * Get the correct user path for API endpoints
+   * Returns '/me' if userId is 'me', otherwise '/users/{userId}'
+   */
+  private getUserPath(): string {
+    return this.userId === 'me' ? '/me' : `/users/${this.userId}`;
+  }
+
+  /**
    * List all teams the user is a member of
    */
   async listTeams(): Promise<any[]> {
     const result = await this.graphClient
-      .api(`/users/${this.userId}/joinedTeams`)
+      .api(`${this.getUserPath()}/joinedTeams`)
       .get();
 
     return result.value;
@@ -206,7 +214,7 @@ export class TeamsTools {
    */
   async listChats(): Promise<any[]> {
     const result = await this.graphClient
-      .api(`/users/${this.userId}/chats`)
+      .api(`${this.getUserPath()}/chats`)
       .get();
 
     return result.value;
@@ -217,7 +225,7 @@ export class TeamsTools {
    */
   async listOnlineMeetings(): Promise<any[]> {
     const result = await this.graphClient
-      .api(`/users/${this.userId}/onlineMeetings`)
+      .api(`${this.getUserPath()}/onlineMeetings`)
       .get();
 
     return result.value;
@@ -228,7 +236,7 @@ export class TeamsTools {
    */
   async createOnlineMeeting(subject: string, startDateTime: string, endDateTime: string): Promise<any> {
     const meeting = await this.graphClient
-      .api(`/users/${this.userId}/onlineMeetings`)
+      .api(`${this.getUserPath()}/onlineMeetings`)
       .post({
         subject,
         startDateTime,

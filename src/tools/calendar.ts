@@ -9,6 +9,14 @@ export class CalendarTools {
   constructor(private graphClient: Client, private userId: string) {}
 
   /**
+   * Get the correct user path for API endpoints
+   * Returns '/me' if userId is 'me', otherwise '/users/{userId}'
+   */
+  private getUserPath(): string {
+    return this.userId === 'me' ? '/me' : `/users/${this.userId}`;
+  }
+
+  /**
    * List calendar events
    */
   async listEvents(options: {
@@ -20,7 +28,7 @@ export class CalendarTools {
     const { top = 10, filter } = options;
 
     let query = this.graphClient
-      .api(`/users/${this.userId}/calendar/events`)
+      .api(`${this.getUserPath()}/calendar/events`)
       .top(top)
       .select(['id', 'subject', 'start', 'end', 'location', 'attendees', 'isOnlineMeeting', 'onlineMeetingUrl'])
       .orderby('start/dateTime');
@@ -38,7 +46,7 @@ export class CalendarTools {
    */
   async getCalendarView(startDateTime: string, endDateTime: string): Promise<CalendarEvent[]> {
     const result = await this.graphClient
-      .api(`/users/${this.userId}/calendar/calendarView`)
+      .api(`${this.getUserPath()}/calendar/calendarView`)
       .query({
         startDateTime,
         endDateTime,
@@ -55,7 +63,7 @@ export class CalendarTools {
    */
   async getEvent(eventId: string): Promise<CalendarEvent> {
     const event = await this.graphClient
-      .api(`/users/${this.userId}/calendar/events/${eventId}`)
+      .api(`${this.getUserPath()}/calendar/events/${eventId}`)
       .get();
 
     return event;
@@ -76,7 +84,7 @@ export class CalendarTools {
     };
 
     const createdEvent = await this.graphClient
-      .api(`/users/${this.userId}/calendar/events`)
+      .api(`${this.getUserPath()}/calendar/events`)
       .post(eventObject);
 
     return createdEvent;
@@ -87,7 +95,7 @@ export class CalendarTools {
    */
   async updateEvent(eventId: string, updates: Partial<CalendarEvent>): Promise<CalendarEvent> {
     const updatedEvent = await this.graphClient
-      .api(`/users/${this.userId}/calendar/events/${eventId}`)
+      .api(`${this.getUserPath()}/calendar/events/${eventId}`)
       .patch(updates);
 
     return updatedEvent;
@@ -98,7 +106,7 @@ export class CalendarTools {
    */
   async deleteEvent(eventId: string): Promise<void> {
     await this.graphClient
-      .api(`/users/${this.userId}/calendar/events/${eventId}`)
+      .api(`${this.getUserPath()}/calendar/events/${eventId}`)
       .delete();
   }
 
@@ -107,7 +115,7 @@ export class CalendarTools {
    */
   async acceptMeeting(eventId: string, comment?: string): Promise<void> {
     await this.graphClient
-      .api(`/users/${this.userId}/events/${eventId}/accept`)
+      .api(`${this.getUserPath()}/events/${eventId}/accept`)
       .post({
         comment: comment || '',
         sendResponse: true,
@@ -119,7 +127,7 @@ export class CalendarTools {
    */
   async declineMeeting(eventId: string, comment?: string): Promise<void> {
     await this.graphClient
-      .api(`/users/${this.userId}/events/${eventId}/decline`)
+      .api(`${this.getUserPath()}/events/${eventId}/decline`)
       .post({
         comment: comment || '',
         sendResponse: true,
@@ -131,7 +139,7 @@ export class CalendarTools {
    */
   async tentativelyAcceptMeeting(eventId: string, comment?: string): Promise<void> {
     await this.graphClient
-      .api(`/users/${this.userId}/events/${eventId}/tentativelyAccept`)
+      .api(`${this.getUserPath()}/events/${eventId}/tentativelyAccept`)
       .post({
         comment: comment || '',
         sendResponse: true,
@@ -160,7 +168,7 @@ export class CalendarTools {
     };
 
     const result = await this.graphClient
-      .api(`/users/${this.userId}/findMeetingTimes`)
+      .api(`${this.getUserPath()}/findMeetingTimes`)
       .post(requestBody);
 
     return result;
@@ -171,7 +179,7 @@ export class CalendarTools {
    */
   async listCalendars(): Promise<any[]> {
     const result = await this.graphClient
-      .api(`/users/${this.userId}/calendars`)
+      .api(`${this.getUserPath()}/calendars`)
       .get();
 
     return result.value;

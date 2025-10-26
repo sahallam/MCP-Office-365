@@ -9,6 +9,14 @@ export class OutlookTools {
   constructor(private graphClient: Client, private userId: string) {}
 
   /**
+   * Get the correct user path for API endpoints
+   * Returns '/me' if userId is 'me', otherwise '/users/{userId}'
+   */
+  private getUserPath(): string {
+    return this.userId === 'me' ? '/me' : `/users/${this.userId}`;
+  }
+
+  /**
    * List emails from inbox
    */
   async listEmails(options: {
@@ -25,7 +33,7 @@ export class OutlookTools {
     } = options;
 
     let query = this.graphClient
-      .api(`/users/${this.userId}/mailFolders/inbox/messages`)
+      .api(`${this.getUserPath()}/mailFolders/inbox/messages`)
       .top(top)
       .orderby(orderBy)
       .select(select);
@@ -43,7 +51,7 @@ export class OutlookTools {
    */
   async getEmail(messageId: string): Promise<EmailMessage> {
     const message = await this.graphClient
-      .api(`/users/${this.userId}/messages/${messageId}`)
+      .api(`${this.getUserPath()}/messages/${messageId}`)
       .get();
 
     return message;
@@ -69,7 +77,7 @@ export class OutlookTools {
     };
 
     await this.graphClient
-      .api(`/users/${this.userId}/sendMail`)
+      .api(`${this.getUserPath()}/sendMail`)
       .post(mailObject);
   }
 
@@ -80,7 +88,7 @@ export class OutlookTools {
     const endpoint = replyAll ? 'replyAll' : 'reply';
 
     await this.graphClient
-      .api(`/users/${this.userId}/messages/${messageId}/${endpoint}`)
+      .api(`${this.getUserPath()}/messages/${messageId}/${endpoint}`)
       .post({
         comment,
       });
@@ -91,7 +99,7 @@ export class OutlookTools {
    */
   async searchEmails(searchQuery: string, top: number = 10): Promise<EmailMessage[]> {
     const result = await this.graphClient
-      .api(`/users/${this.userId}/messages`)
+      .api(`${this.getUserPath()}/messages`)
       .search(`"${searchQuery}"`)
       .top(top)
       .select(['id', 'subject', 'from', 'receivedDateTime', 'bodyPreview', 'hasAttachments'])
@@ -105,7 +113,7 @@ export class OutlookTools {
    */
   async markEmailAsRead(messageId: string, isRead: boolean = true): Promise<void> {
     await this.graphClient
-      .api(`/users/${this.userId}/messages/${messageId}`)
+      .api(`${this.getUserPath()}/messages/${messageId}`)
       .patch({
         isRead,
       });
@@ -116,7 +124,7 @@ export class OutlookTools {
    */
   async deleteEmail(messageId: string): Promise<void> {
     await this.graphClient
-      .api(`/users/${this.userId}/messages/${messageId}`)
+      .api(`${this.getUserPath()}/messages/${messageId}`)
       .delete();
   }
 
@@ -125,7 +133,7 @@ export class OutlookTools {
    */
   async moveEmail(messageId: string, destinationFolderId: string): Promise<void> {
     await this.graphClient
-      .api(`/users/${this.userId}/messages/${messageId}/move`)
+      .api(`${this.getUserPath()}/messages/${messageId}/move`)
       .post({
         destinationId: destinationFolderId,
       });
@@ -136,7 +144,7 @@ export class OutlookTools {
    */
   async listMailFolders(): Promise<any[]> {
     const result = await this.graphClient
-      .api(`/users/${this.userId}/mailFolders`)
+      .api(`${this.getUserPath()}/mailFolders`)
       .get();
 
     return result.value;
@@ -147,7 +155,7 @@ export class OutlookTools {
    */
   async createDraft(message: EmailMessage): Promise<EmailMessage> {
     const draft = await this.graphClient
-      .api(`/users/${this.userId}/messages`)
+      .api(`${this.getUserPath()}/messages`)
       .post({
         subject: message.subject,
         body: message.body,
