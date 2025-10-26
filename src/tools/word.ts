@@ -9,11 +9,19 @@ export class WordTools {
   constructor(private graphClient: Client, private userId: string) {}
 
   /**
+   * Get the correct user path for API endpoints
+   * Returns '/me' if userId is 'me', otherwise '/users/{userId}'
+   */
+  private getUserPath(): string {
+    return this.userId === 'me' ? '/me' : `/users/${this.userId}`;
+  }
+
+  /**
    * Get Word document metadata
    */
   async getDocument(itemId: string): Promise<WordDocument> {
     const document = await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}`)
       .get();
 
     return {
@@ -29,7 +37,7 @@ export class WordTools {
    */
   async getDocumentContent(itemId: string): Promise<ArrayBuffer> {
     const content = await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}/content`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}/content`)
       .get();
 
     return content;
@@ -40,7 +48,7 @@ export class WordTools {
    */
   async convertToPdf(itemId: string): Promise<ArrayBuffer> {
     const pdfContent = await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}/content?format=pdf`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}/content?format=pdf`)
       .get();
 
     return pdfContent;
@@ -51,7 +59,7 @@ export class WordTools {
    */
   async searchDocuments(query: string): Promise<WordDocument[]> {
     const result = await this.graphClient
-      .api(`/users/${this.userId}/drive/root/search(q='${query}')`)
+      .api(`${this.getUserPath()}/drive/root/search(q='${query}')`)
       .filter("file/mimeType eq 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'")
       .select(['id', 'name', 'webUrl'])
       .get();
@@ -64,8 +72,8 @@ export class WordTools {
    */
   async createDocument(fileName: string, content?: Buffer | string, parentFolderId?: string): Promise<WordDocument> {
     const endpoint = parentFolderId
-      ? `/users/${this.userId}/drive/items/${parentFolderId}:/${fileName}:/content`
-      : `/users/${this.userId}/drive/root:/${fileName}:/content`;
+      ? `${this.getUserPath()}/drive/items/${parentFolderId}:/${fileName}:/content`
+      : `${this.getUserPath()}/drive/root:/${fileName}:/content`;
 
     // Create an empty Word document or with provided content
     const documentContent = content || Buffer.from('');
@@ -97,7 +105,7 @@ export class WordTools {
     }
 
     await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}/copy`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}/copy`)
       .post(requestBody);
   }
 
@@ -106,7 +114,7 @@ export class WordTools {
    */
   async getPermissions(itemId: string): Promise<any[]> {
     const result = await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}/permissions`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}/permissions`)
       .get();
 
     return result.value;
@@ -121,7 +129,7 @@ export class WordTools {
     scope: 'anonymous' | 'organization' = 'organization'
   ): Promise<string> {
     const result = await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}/createLink`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}/createLink`)
       .post({
         type,
         scope,
@@ -135,7 +143,7 @@ export class WordTools {
    */
   async getVersions(itemId: string): Promise<any[]> {
     const result = await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}/versions`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}/versions`)
       .get();
 
     return result.value;
@@ -146,7 +154,7 @@ export class WordTools {
    */
   async restoreVersion(itemId: string, versionId: string): Promise<void> {
     await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}/versions/${versionId}/restoreVersion`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}/versions/${versionId}/restoreVersion`)
       .post({});
   }
 
@@ -155,7 +163,7 @@ export class WordTools {
    */
   async getThumbnails(itemId: string): Promise<any[]> {
     const result = await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}/thumbnails`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}/thumbnails`)
       .get();
 
     return result.value;
@@ -166,7 +174,7 @@ export class WordTools {
    */
   async checkOut(itemId: string): Promise<void> {
     await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}/checkout`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}/checkout`)
       .post({});
   }
 
@@ -175,7 +183,7 @@ export class WordTools {
    */
   async checkIn(itemId: string, comment?: string): Promise<void> {
     await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}/checkin`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}/checkin`)
       .post({
         comment: comment || '',
       });
@@ -186,7 +194,7 @@ export class WordTools {
    */
   async getRecentDocuments(top: number = 10): Promise<WordDocument[]> {
     const result = await this.graphClient
-      .api(`/users/${this.userId}/drive/recent`)
+      .api(`${this.getUserPath()}/drive/recent`)
       .filter("file/mimeType eq 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'")
       .top(top)
       .select(['id', 'name', 'webUrl'])

@@ -9,12 +9,20 @@ export class OneDriveTools {
   constructor(private graphClient: Client, private userId: string) {}
 
   /**
+   * Get the correct user path for API endpoints
+   * Returns '/me' if userId is 'me', otherwise '/users/{userId}'
+   */
+  private getUserPath(): string {
+    return this.userId === 'me' ? '/me' : `/users/${this.userId}`;
+  }
+
+  /**
    * List items in OneDrive root or a specific folder
    */
   async listItems(folderId?: string): Promise<DriveItem[]> {
     const endpoint = folderId
-      ? `/users/${this.userId}/drive/items/${folderId}/children`
-      : `/users/${this.userId}/drive/root/children`;
+      ? `${this.getUserPath()}/drive/items/${folderId}/children`
+      : `${this.getUserPath()}/drive/root/children`;
 
     const result = await this.graphClient
       .api(endpoint)
@@ -29,7 +37,7 @@ export class OneDriveTools {
    */
   async getItem(itemId: string): Promise<DriveItem> {
     const item = await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}`)
       .get();
 
     return item;
@@ -40,7 +48,7 @@ export class OneDriveTools {
    */
   async getItemByPath(path: string): Promise<DriveItem> {
     const item = await this.graphClient
-      .api(`/users/${this.userId}/drive/root:/${path}`)
+      .api(`${this.getUserPath()}/drive/root:/${path}`)
       .get();
 
     return item;
@@ -51,7 +59,7 @@ export class OneDriveTools {
    */
   async downloadFile(itemId: string): Promise<ArrayBuffer> {
     const content = await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}/content`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}/content`)
       .get();
 
     return content;
@@ -66,8 +74,8 @@ export class OneDriveTools {
     parentFolderId?: string
   ): Promise<DriveItem> {
     const endpoint = parentFolderId
-      ? `/users/${this.userId}/drive/items/${parentFolderId}:/${fileName}:/content`
-      : `/users/${this.userId}/drive/root:/${fileName}:/content`;
+      ? `${this.getUserPath()}/drive/items/${parentFolderId}:/${fileName}:/content`
+      : `${this.getUserPath()}/drive/root:/${fileName}:/content`;
 
     // Convert base64 string to Buffer if needed
     let uploadContent: Buffer;
@@ -91,8 +99,8 @@ export class OneDriveTools {
    */
   async createFolder(folderName: string, parentFolderId?: string): Promise<DriveItem> {
     const endpoint = parentFolderId
-      ? `/users/${this.userId}/drive/items/${parentFolderId}/children`
-      : `/users/${this.userId}/drive/root/children`;
+      ? `${this.getUserPath()}/drive/items/${parentFolderId}/children`
+      : `${this.getUserPath()}/drive/root/children`;
 
     const folder = await this.graphClient
       .api(endpoint)
@@ -110,7 +118,7 @@ export class OneDriveTools {
    */
   async deleteItem(itemId: string): Promise<void> {
     await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}`)
       .delete();
   }
 
@@ -129,7 +137,7 @@ export class OneDriveTools {
     }
 
     await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}/copy`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}/copy`)
       .post(requestBody);
   }
 
@@ -148,7 +156,7 @@ export class OneDriveTools {
     }
 
     const movedItem = await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}`)
       .patch(requestBody);
 
     return movedItem;
@@ -159,7 +167,7 @@ export class OneDriveTools {
    */
   async searchItems(query: string): Promise<DriveItem[]> {
     const result = await this.graphClient
-      .api(`/users/${this.userId}/drive/root/search(q='${query}')`)
+      .api(`${this.getUserPath()}/drive/root/search(q='${query}')`)
       .select(['id', 'name', 'size', 'webUrl', 'folder', 'file'])
       .get();
 
@@ -171,7 +179,7 @@ export class OneDriveTools {
    */
   async shareItem(itemId: string, type: 'view' | 'edit' = 'view', scope: 'anonymous' | 'organization' = 'organization'): Promise<string> {
     const result = await this.graphClient
-      .api(`/users/${this.userId}/drive/items/${itemId}/createLink`)
+      .api(`${this.getUserPath()}/drive/items/${itemId}/createLink`)
       .post({
         type,
         scope,
@@ -185,7 +193,7 @@ export class OneDriveTools {
    */
   async getRecentFiles(top: number = 10): Promise<DriveItem[]> {
     const result = await this.graphClient
-      .api(`/users/${this.userId}/drive/recent`)
+      .api(`${this.getUserPath()}/drive/recent`)
       .top(top)
       .get();
 
@@ -197,7 +205,7 @@ export class OneDriveTools {
    */
   async getSharedWithMe(): Promise<DriveItem[]> {
     const result = await this.graphClient
-      .api(`/users/${this.userId}/drive/sharedWithMe`)
+      .api(`${this.getUserPath()}/drive/sharedWithMe`)
       .get();
 
     return result.value;
