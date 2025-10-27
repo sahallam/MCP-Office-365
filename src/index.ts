@@ -26,6 +26,7 @@ import { WordTools } from './tools/word.js';
 import { OneNoteTools } from './tools/onenote.js';
 import { GraphConfig } from './types.js';
 import { getPublicErrorMessage } from './security.js';
+import { auditLogger, AuditEventType } from './audit.js';
 
 // Load environment variables
 dotenv.config();
@@ -868,6 +869,21 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         throw new Error(`Unknown tool: ${name}`);
     }
 
+    // Audit log successful tool execution
+    const auditType = name.includes('delete') ? AuditEventType.RESOURCE_DELETE :
+                      name.includes('create') || name.includes('send') || name.includes('upload') ? AuditEventType.RESOURCE_CREATE :
+                      name.includes('update') || name.includes('accept') || name.includes('decline') ? AuditEventType.RESOURCE_UPDATE :
+                      name.includes('search') || name.includes('find') ? AuditEventType.RESOURCE_SEARCH :
+                      AuditEventType.RESOURCE_READ;
+
+    auditLogger.logSuccess(
+      auditType,
+      name,
+      `tool:${name}`,
+      userId,
+      `Args: ${JSON.stringify(args).substring(0, 100)}`
+    );
+
     return {
       content: [
         {
@@ -879,6 +895,16 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   } catch (error) {
     // Log detailed error internally for debugging
     console.error(`[MCP] Tool execution error for ${name}:`, error);
+
+    // Audit log failed tool execution
+    auditLogger.logFailure(
+      AuditEventType.RESOURCE_READ,
+      name,
+      `tool:${name}`,
+      error instanceof Error ? error.message : 'Unknown error',
+      authProvider.getUserId(),
+      `Args: ${JSON.stringify(args).substring(0, 100)}`
+    );
 
     // Return sanitized error message to user
     const userMessage = error instanceof Error

@@ -47,6 +47,9 @@ export class ExcelTools {
    * Get a specific worksheet
    */
   async getWorksheet(itemId: string, worksheetId: string): Promise<ExcelWorksheet> {
+    validateResourceId(itemId, 'workbook');
+    validateResourceId(worksheetId, 'worksheet');
+
     const worksheet = await this.graphClient
       .api(`${this.getUserPath()}/drive/items/${itemId}/workbook/worksheets/${worksheetId}`)
       .get();
@@ -58,6 +61,20 @@ export class ExcelTools {
    * Create a new worksheet
    */
   async createWorksheet(itemId: string, name: string): Promise<ExcelWorksheet> {
+    validateResourceId(itemId, 'workbook');
+
+    // Validate worksheet name
+    if (!name || typeof name !== 'string' || name.length === 0) {
+      throw new Error('Worksheet name must be a non-empty string');
+    }
+    if (name.length > 255) {
+      throw new Error('Worksheet name must be less than 255 characters');
+    }
+    // Excel worksheet names cannot contain: \ / ? * [ ]
+    if (/[\\\/\?\*\[\]]/.test(name)) {
+      throw new Error('Worksheet name cannot contain: \\ / ? * [ ]');
+    }
+
     const worksheet = await this.graphClient
       .api(`${this.getUserPath()}/drive/items/${itemId}/workbook/worksheets/add`)
       .post({
@@ -117,6 +134,10 @@ export class ExcelTools {
    * Add a table to a worksheet
    */
   async createTable(itemId: string, worksheetId: string, address: string, hasHeaders: boolean = true): Promise<any> {
+    validateResourceId(itemId, 'workbook');
+    validateResourceId(worksheetId, 'worksheet');
+    validateExcelAddress(address);
+
     const table = await this.graphClient
       .api(`${this.getUserPath()}/drive/items/${itemId}/workbook/worksheets/${worksheetId}/tables/add`)
       .post({
@@ -131,6 +152,9 @@ export class ExcelTools {
    * List tables in a worksheet
    */
   async listTables(itemId: string, worksheetId: string): Promise<any[]> {
+    validateResourceId(itemId, 'workbook');
+    validateResourceId(worksheetId, 'worksheet');
+
     const result = await this.graphClient
       .api(`${this.getUserPath()}/drive/items/${itemId}/workbook/worksheets/${worksheetId}/tables`)
       .get();

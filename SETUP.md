@@ -91,12 +91,18 @@ Add these permissions:
 - TeamSettings.Read.All
 - TeamSettings.ReadWrite.All
 - ChannelMessage.Read.All
-- Group.ReadWrite.All (required for sending channel messages)
+- Team.ReadBasic.All
+- Channel.ReadBasic.All
+- TeamMember.Read.All
+
+> **Note**: For delegated permissions (user context), also add:
+> - `ChannelMessage.Send` (for sending messages)
+> - `Channel.Create` (for creating channels)
+>
+> **Important**: Application permissions (app-only mode) **cannot send messages** to Teams channels. This is a Microsoft restriction. For automated messaging, use Incoming Webhooks instead.
 
 **User Permissions:**
 - User.Read.All
-
-> **Note**: `Group.ReadWrite.All` is required for application permissions to send messages to Teams channels. For delegated permissions (user context), you can use `ChannelMessage.Send` instead.
 
 ### Step 5: Grant Admin Consent
 

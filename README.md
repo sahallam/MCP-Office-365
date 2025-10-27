@@ -82,25 +82,59 @@ This code was developed by Claude Code.
 
 ## Authentication Modes
 
-This server supports two authentication modes:
+This server supports two authentication modes. Choose based on your use case:
 
-### 1. Delegated Authentication (Recommended)
-- Uses **device code flow** for user authentication
-- User signs in with their Microsoft account
-- **Required for**: Teams, OneNote (after March 31, 2025)
-- **Best for**: Interactive scenarios where a user can authenticate
-- **Does NOT require**: CLIENT_SECRET
-- Tokens are cached and automatically refreshed
+### 1. Delegated Authentication (Recommended for Interactive Use)
 
-### 2. App-Only Authentication
-- Uses **client credentials flow** (application-only)
-- No user interaction required
-- **Required for**: Automation scenarios
-- **Requires**: CLIENT_SECRET, USER_PRINCIPAL_NAME or USER_ID
-- Works for Outlook, Calendar, OneDrive, SharePoint
-- **Limited support**: Teams (some features), OneNote (deprecated March 31, 2025)
+**How it works:**
+- Uses **OAuth 2.0 Device Code Flow** for user authentication
+- User signs in with their Microsoft account credentials
+- Actions are performed in the user's context with their permissions
+- Tokens are cached securely and automatically refreshed
 
-**For most use cases with Claude Desktop, use Delegated Authentication.**
+**When to use:**
+- ✅ Interactive scenarios with Claude Desktop or similar tools
+- ✅ Personal productivity and user-driven tasks
+- ✅ When you want actions attributed to a real user
+- ✅ Teams and OneNote access (required after March 31, 2025)
+- ✅ Better security with user-level MFA and conditional access
+
+**Requirements:**
+- User must be able to authenticate via browser (device code flow)
+- Does NOT require CLIENT_SECRET
+
+**Supported services:** All (Outlook, Calendar, OneDrive, SharePoint, Teams, Excel, Word, OneNote)
+
+### 2. App-Only Authentication (For Automation & Background Services)
+
+**How it works:**
+- Uses **OAuth 2.0 Client Credentials Flow** (application-only)
+- Authenticates as the application itself, not a user
+- Requires specifying which user's data to access
+- No interactive authentication needed
+
+**When to use:**
+- ✅ Automated background services (scheduled jobs, batch processing)
+- ✅ Headless environments (Docker, serverless functions, CI/CD)
+- ✅ Multi-user administrative operations
+- ✅ Shared mailbox or resource management
+- ✅ 24/7 services without user sessions
+- ✅ SaaS applications serving multiple organizations
+
+**Requirements:**
+- CLIENT_SECRET (application secret key)
+- USER_PRINCIPAL_NAME or USER_ID (to specify which user's data to access)
+- Admin consent for application permissions
+
+**Supported services:** Outlook, Calendar, OneDrive, SharePoint, Excel, Word
+**Limited support:** Teams (some features), OneNote (deprecated March 31, 2025)
+
+**⚠️ Security Note:** App-only authentication has higher privilege and should only be used when delegated auth is not feasible. Secure the CLIENT_SECRET carefully.
+
+---
+
+**For Claude Desktop and interactive use: Choose Delegated Authentication**
+**For automation and background services: Choose App-Only Authentication**
 
 ## Setup
 
@@ -126,12 +160,13 @@ Choose the permissions based on your authentication mode:
 
 Add these **Delegated Permissions**:
 - `Calendars.ReadWrite`
+- `Channel.Create` (for creating Teams channels)
 - `Channel.ReadBasic.All`
 - `ChannelMessage.Read.All`
+- `ChannelMessage.Send` (for sending Teams channel messages)
 - `Chat.Read`
 - `Chat.ReadWrite`
 - `Files.ReadWrite.All`
-- `Group.ReadWrite.All` (required for sending Teams channel messages)
 - `Mail.ReadWrite`
 - `Mail.Send`
 - `Notes.Read.All`
@@ -139,6 +174,7 @@ Add these **Delegated Permissions**:
 - `Sites.Read.All`
 - `Sites.ReadWrite.All`
 - `Team.ReadBasic.All`
+- `TeamMember.Read.All` (for reading team members)
 - `TeamSettings.Read.All`
 - `TeamSettings.ReadWrite.All`
 - `User.Read`
@@ -147,6 +183,8 @@ Add these **Delegated Permissions**:
 After adding permissions, click **Grant admin consent** for your organization.
 
 > **Note**: With delegated auth, the user will be prompted to consent to these permissions when they first sign in via device code flow.
+>
+> **Security Note**: We use granular permissions like `ChannelMessage.Send` instead of the overly broad `Group.ReadWrite.All` which would grant access to ALL groups in your organization.
 
 #### For App-Only Authentication
 
@@ -155,10 +193,8 @@ Add these **Application Permissions**:
 - `Calendars.ReadWrite`
 - `Channel.ReadBasic.All`
 - `ChannelMessage.Read.All`
-- `ChannelMessage.Send` (for sending Teams messages as the user)
 - `Files.Read.All`
 - `Files.ReadWrite.All`
-- `Group.ReadWrite.All` (required for Teams operations)
 - `Mail.Read`
 - `Mail.ReadWrite`
 - `Mail.Send`
@@ -168,13 +204,20 @@ Add these **Application Permissions**:
 - `Sites.Read.All`
 - `Sites.ReadWrite.All`
 - `Team.ReadBasic.All`
+- `TeamMember.Read.All`
 - `TeamSettings.Read.All`
 - `TeamSettings.ReadWrite.All`
 - `User.Read.All`
 
 After adding permissions, click **Grant admin consent** for your organization.
 
-> **Important**: App-only mode has limited Teams support and OneNote will stop working on March 31, 2025.
+> **Important Teams Limitations with App-Only Auth:**
+> - **Cannot send messages** to Teams channels with application permissions (Microsoft restriction)
+> - Can only read channels, messages, and team info
+> - For automated message sending, use [Incoming Webhooks](https://learn.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook) instead
+> - OneNote will stop working on March 31, 2025
+>
+> **Security Note**: We do NOT use `Group.ReadWrite.All` which would grant excessive access to ALL groups. We use specific permissions for the operations we need.
 
 ### 3. Create Client Secret (App-Only Mode Only)
 
@@ -507,15 +550,80 @@ To enable verbose logging, set the `DEBUG` environment variable:
 DEBUG=* npm start
 ```
 
-## Security Considerations
+## Security Architecture
 
-- **Never commit** your `.env` file or `.token-cache.json` to version control
-- **Token cache**: The `.token-cache.json` file contains access tokens - keep it secure
-- **Rotate client secrets** regularly (app-only mode)
-- **Use least privilege**: Only grant necessary permissions
-- **Monitor access**: Review Microsoft Entra ID sign-in logs regularly
-- **Secure storage**: Store credentials securely (use Azure Key Vault in production)
-- **Delegated auth**: Tokens are tied to the signed-in user - ensure the user has appropriate access
+This server implements enterprise-grade security following OWASP Top 10 (2021) guidelines.
+
+### Authentication & Token Management
+
+**Secure Token Storage**
+- All tokens are encrypted at rest using AES-256-GCM
+- Token cache files have restrictive permissions (0600 - owner read/write only)
+- Supports custom encryption keys via `TOKEN_ENCRYPTION_KEY` environment variable
+- Automatic token expiration and refresh handling
+- Token revocation on logout with complete cache cleanup
+
+**Authentication Modes**
+- OAuth 2.0 with Microsoft Identity Platform
+- Delegated: Device Code Flow (user authentication)
+- App-Only: Client Credentials Flow (application authentication)
+- Automatic token validation and refresh
+
+### Data Protection
+
+**Encryption**
+- TLS 1.2/1.3 enforced for all API communications
+- Insecure SSL/TLS versions disabled (SSLv2, SSLv3, TLS 1.0, TLS 1.1)
+- Strong cipher suites only (AES-GCM, ChaCha20-Poly1305)
+- Certificate validation enforced
+
+**Input Validation**
+- Comprehensive validation for all user inputs
+- Protection against injection attacks (OData, XSS, SQL)
+- Resource ID validation with pattern matching
+- File size limits enforced
+- Path traversal prevention
+
+**Content Sanitization**
+- HTML content sanitization for OneNote and Teams
+- Search query sanitization for all search operations
+- Excel formula injection prevention
+- URL validation and SSRF protection
+
+### Audit Logging
+
+**Security Event Logging**
+- Authentication events (login, logout, token operations)
+- Resource access tracking (read, create, update, delete)
+- Security violations and failed validations
+- Automatic log rotation (90-day retention by default)
+- Logs stored in `~/.office365-mcp/audit/` with secure permissions
+
+**Configuration**
+- Enable/disable: Set `AUDIT_ENABLED=true/false`
+- Debug mode: Set `DEBUG_AUDIT=true` for verbose logging
+- Logs are JSON formatted for easy parsing and analysis
+
+### Best Practices
+
+**Credential Management**
+- **Never commit** `.env` files or token caches to version control
+- Use Azure Key Vault or similar for production credentials
+- Set `TOKEN_ENCRYPTION_KEY` for enhanced token security
+- Rotate client secrets regularly (app-only mode)
+
+**Access Control**
+- Apply least privilege principle - only grant necessary permissions
+- Use delegated authentication when possible (user context)
+- Monitor access via Microsoft Entra ID sign-in logs
+- Review audit logs regularly for suspicious activity
+
+**Operational Security**
+- Keep dependencies updated (`npm audit`)
+- Review Microsoft Graph API permissions periodically
+- Use app-only authentication only when necessary
+- Implement rate limiting for high-volume operations
+- Secure the token cache directory permissions
 
 ## Limitations
 

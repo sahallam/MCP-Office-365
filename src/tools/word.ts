@@ -81,6 +81,19 @@ export class WordTools {
    * Create a new Word document
    */
   async createDocument(fileName: string, content?: Buffer | string, parentFolderId?: string): Promise<WordDocument> {
+    // Validate fileName
+    if (!fileName || typeof fileName !== 'string' || fileName.length === 0) {
+      throw new Error('File name must be a non-empty string');
+    }
+    if (fileName.includes('/') || fileName.includes('\\')) {
+      throw new Error('File name cannot contain path separators');
+    }
+
+    // Validate parentFolderId if provided
+    if (parentFolderId) {
+      validateResourceId(parentFolderId, 'folder');
+    }
+
     const endpoint = parentFolderId
       ? `${this.getUserPath()}/drive/items/${parentFolderId}:/${fileName}:/content`
       : `${this.getUserPath()}/drive/root:/${fileName}:/content`;
@@ -159,6 +172,8 @@ export class WordTools {
    * Get document versions
    */
   async getVersions(itemId: string): Promise<any[]> {
+    validateResourceId(itemId, 'document');
+
     const result = await this.graphClient
       .api(`${this.getUserPath()}/drive/items/${itemId}/versions`)
       .get();
@@ -170,6 +185,9 @@ export class WordTools {
    * Restore a previous version
    */
   async restoreVersion(itemId: string, versionId: string): Promise<void> {
+    validateResourceId(itemId, 'document');
+    validateResourceId(versionId, 'version');
+
     await this.graphClient
       .api(`${this.getUserPath()}/drive/items/${itemId}/versions/${versionId}/restoreVersion`)
       .post({});

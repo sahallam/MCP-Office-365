@@ -130,7 +130,16 @@ export class SharePointTools {
     // Convert base64 string to Buffer if needed
     let uploadContent: Buffer;
     if (typeof content === 'string') {
-      uploadContent = Buffer.from(content, 'base64');
+      try {
+        uploadContent = Buffer.from(content, 'base64');
+
+        // Validate that it's actually valid base64
+        if (uploadContent.toString('base64') !== content.replace(/\s/g, '')) {
+          throw new Error('Invalid base64 encoding');
+        }
+      } catch (error) {
+        throw new Error('Invalid base64 string provided for file content');
+      }
     } else {
       uploadContent = content;
     }
@@ -180,6 +189,9 @@ export class SharePointTools {
    * Get list items
    */
   async getListItems(siteId: string, listId: string): Promise<any[]> {
+    validateResourceId(siteId, 'site');
+    validateResourceId(listId, 'list');
+
     const result = await this.graphClient
       .api(`/sites/${siteId}/lists/${listId}/items`)
       .expand('fields')
@@ -192,6 +204,9 @@ export class SharePointTools {
    * Create list item
    */
   async createListItem(siteId: string, listId: string, fields: Record<string, any>): Promise<any> {
+    validateResourceId(siteId, 'site');
+    validateResourceId(listId, 'list');
+
     const item = await this.graphClient
       .api(`/sites/${siteId}/lists/${listId}/items`)
       .post({
@@ -205,6 +220,10 @@ export class SharePointTools {
    * Update list item
    */
   async updateListItem(siteId: string, listId: string, itemId: string, fields: Record<string, any>): Promise<any> {
+    validateResourceId(siteId, 'site');
+    validateResourceId(listId, 'list');
+    validateResourceId(itemId, 'item');
+
     const item = await this.graphClient
       .api(`/sites/${siteId}/lists/${listId}/items/${itemId}/fields`)
       .patch(fields);
@@ -216,6 +235,10 @@ export class SharePointTools {
    * Delete list item
    */
   async deleteListItem(siteId: string, listId: string, itemId: string): Promise<void> {
+    validateResourceId(siteId, 'site');
+    validateResourceId(listId, 'list');
+    validateResourceId(itemId, 'item');
+
     await this.graphClient
       .api(`/sites/${siteId}/lists/${listId}/items/${itemId}`)
       .delete();
@@ -236,6 +259,8 @@ export class SharePointTools {
    * List subsites
    */
   async listSubsites(siteId: string): Promise<SharePointSite[]> {
+    validateResourceId(siteId, 'site');
+
     const result = await this.graphClient
       .api(`/sites/${siteId}/sites`)
       .get();

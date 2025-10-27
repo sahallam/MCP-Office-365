@@ -87,7 +87,16 @@ export class OneDriveTools {
     let uploadContent: Buffer;
     if (typeof content === 'string') {
       // Assume base64 encoding for string content
-      uploadContent = Buffer.from(content, 'base64');
+      try {
+        uploadContent = Buffer.from(content, 'base64');
+
+        // Validate that it's actually valid base64
+        if (uploadContent.toString('base64') !== content.replace(/\s/g, '')) {
+          throw new Error('Invalid base64 encoding');
+        }
+      } catch (error) {
+        throw new Error('Invalid base64 string provided for file content');
+      }
     } else {
       uploadContent = content;
     }

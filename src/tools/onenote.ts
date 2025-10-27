@@ -10,6 +10,14 @@ export class OneNoteTools {
   constructor(private graphClient: Client, private userId: string) {}
 
   /**
+   * Get the correct user path for API endpoints
+   * Returns '/me' if userId is 'me', otherwise '/users/{userId}'
+   */
+  private getUserPath(): string {
+    return this.userId === 'me' ? '/me' : `${this.getUserPath()}`;
+  }
+
+  /**
    * List all notebooks
    */
   async listNotebooks(options: {
@@ -24,7 +32,7 @@ export class OneNoteTools {
     } = options;
 
     let query = this.graphClient
-      .api(`/users/${this.userId}/onenote/notebooks`)
+      .api(`${this.getUserPath()}/onenote/notebooks`)
       .top(top)
       .orderby(orderBy)
       .select(select);
@@ -40,7 +48,7 @@ export class OneNoteTools {
     validateResourceId(notebookId, 'notebook');
 
     const notebook = await this.graphClient
-      .api(`/users/${this.userId}/onenote/notebooks/${notebookId}`)
+      .api(`${this.getUserPath()}/onenote/notebooks/${notebookId}`)
       .get();
 
     return notebook;
@@ -51,7 +59,7 @@ export class OneNoteTools {
    */
   async createNotebook(displayName: string): Promise<OneNoteNotebook> {
     const notebook = await this.graphClient
-      .api(`/users/${this.userId}/onenote/notebooks`)
+      .api(`${this.getUserPath()}/onenote/notebooks`)
       .post({
         displayName
       });
@@ -74,8 +82,8 @@ export class OneNoteTools {
     } = options;
 
     let apiPath = notebookId
-      ? `/users/${this.userId}/onenote/notebooks/${notebookId}/sections`
-      : `/users/${this.userId}/onenote/sections`;
+      ? `${this.getUserPath()}/onenote/notebooks/${notebookId}/sections`
+      : `${this.getUserPath()}/onenote/sections`;
 
     let query = this.graphClient
       .api(apiPath)
@@ -93,7 +101,7 @@ export class OneNoteTools {
     validateResourceId(sectionId, 'section');
 
     const section = await this.graphClient
-      .api(`/users/${this.userId}/onenote/sections/${sectionId}`)
+      .api(`${this.getUserPath()}/onenote/sections/${sectionId}`)
       .get();
 
     return section;
@@ -106,7 +114,7 @@ export class OneNoteTools {
     validateResourceId(notebookId, 'notebook');
 
     const section = await this.graphClient
-      .api(`/users/${this.userId}/onenote/notebooks/${notebookId}/sections`)
+      .api(`${this.getUserPath()}/onenote/notebooks/${notebookId}/sections`)
       .post({
         displayName
       });
@@ -134,11 +142,11 @@ export class OneNoteTools {
 
     let apiPath: string;
     if (sectionId) {
-      apiPath = `/users/${this.userId}/onenote/sections/${sectionId}/pages`;
+      apiPath = `${this.getUserPath()}/onenote/sections/${sectionId}/pages`;
     } else if (notebookId) {
-      apiPath = `/users/${this.userId}/onenote/notebooks/${notebookId}/pages`;
+      apiPath = `${this.getUserPath()}/onenote/notebooks/${notebookId}/pages`;
     } else {
-      apiPath = `/users/${this.userId}/onenote/pages`;
+      apiPath = `${this.getUserPath()}/onenote/pages`;
     }
 
     let query = this.graphClient
@@ -163,7 +171,7 @@ export class OneNoteTools {
     validateResourceId(pageId, 'page');
 
     const page = await this.graphClient
-      .api(`/users/${this.userId}/onenote/pages/${pageId}`)
+      .api(`${this.getUserPath()}/onenote/pages/${pageId}`)
       .get();
 
     return page;
@@ -176,7 +184,7 @@ export class OneNoteTools {
     validateResourceId(pageId, 'page');
 
     const content = await this.graphClient
-      .api(`/users/${this.userId}/onenote/pages/${pageId}/content`)
+      .api(`${this.getUserPath()}/onenote/pages/${pageId}/content`)
       .get();
 
     return content;
@@ -214,7 +222,7 @@ export class OneNoteTools {
 </html>`;
 
     const page = await this.graphClient
-      .api(`/users/${this.userId}/onenote/sections/${sectionId}/pages`)
+      .api(`${this.getUserPath()}/onenote/sections/${sectionId}/pages`)
       .header('Content-Type', 'text/html')
       .post(htmlContent);
 
@@ -245,7 +253,7 @@ export class OneNoteTools {
     ];
 
     await this.graphClient
-      .api(`/users/${this.userId}/onenote/pages/${pageId}/content`)
+      .api(`${this.getUserPath()}/onenote/pages/${pageId}/content`)
       .patch(commands);
   }
 
@@ -256,7 +264,7 @@ export class OneNoteTools {
     validateResourceId(pageId, 'page');
 
     await this.graphClient
-      .api(`/users/${this.userId}/onenote/pages/${pageId}`)
+      .api(`${this.getUserPath()}/onenote/pages/${pageId}`)
       .delete();
   }
 
@@ -267,7 +275,7 @@ export class OneNoteTools {
     validateResourceId(sectionId, 'section');
 
     await this.graphClient
-      .api(`/users/${this.userId}/onenote/sections/${sectionId}`)
+      .api(`${this.getUserPath()}/onenote/sections/${sectionId}`)
       .delete();
   }
 
@@ -278,7 +286,7 @@ export class OneNoteTools {
     validateResourceId(notebookId, 'notebook');
 
     await this.graphClient
-      .api(`/users/${this.userId}/onenote/notebooks/${notebookId}`)
+      .api(`${this.getUserPath()}/onenote/notebooks/${notebookId}`)
       .delete();
   }
 
@@ -290,7 +298,7 @@ export class OneNoteTools {
     const sanitizedQuery = sanitizeSearchQuery(searchQuery);
 
     const result = await this.graphClient
-      .api(`/users/${this.userId}/onenote/pages`)
+      .api(`${this.getUserPath()}/onenote/pages`)
       .search(`"${sanitizedQuery}"`)
       .top(top)
       .select(['id', 'title', 'createdDateTime', 'lastModifiedDateTime'])
@@ -307,7 +315,7 @@ export class OneNoteTools {
     validateResourceId(targetSectionId, 'section');
 
     const result = await this.graphClient
-      .api(`/users/${this.userId}/onenote/pages/${pageId}/copyToSection`)
+      .api(`${this.getUserPath()}/onenote/pages/${pageId}/copyToSection`)
       .post({
         id: targetSectionId
       });
