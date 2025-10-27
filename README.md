@@ -82,25 +82,59 @@ This code was developed by Claude Code.
 
 ## Authentication Modes
 
-This server supports two authentication modes:
+This server supports two authentication modes. Choose based on your use case:
 
-### 1. Delegated Authentication (Recommended)
-- Uses **device code flow** for user authentication
-- User signs in with their Microsoft account
-- **Required for**: Teams, OneNote (after March 31, 2025)
-- **Best for**: Interactive scenarios where a user can authenticate
-- **Does NOT require**: CLIENT_SECRET
-- Tokens are cached and automatically refreshed
+### 1. Delegated Authentication (Recommended for Interactive Use)
 
-### 2. App-Only Authentication
-- Uses **client credentials flow** (application-only)
-- No user interaction required
-- **Required for**: Automation scenarios
-- **Requires**: CLIENT_SECRET, USER_PRINCIPAL_NAME or USER_ID
-- Works for Outlook, Calendar, OneDrive, SharePoint
-- **Limited support**: Teams (some features), OneNote (deprecated March 31, 2025)
+**How it works:**
+- Uses **OAuth 2.0 Device Code Flow** for user authentication
+- User signs in with their Microsoft account credentials
+- Actions are performed in the user's context with their permissions
+- Tokens are cached securely and automatically refreshed
 
-**For most use cases with Claude Desktop, use Delegated Authentication.**
+**When to use:**
+- ✅ Interactive scenarios with Claude Desktop or similar tools
+- ✅ Personal productivity and user-driven tasks
+- ✅ When you want actions attributed to a real user
+- ✅ Teams and OneNote access (required after March 31, 2025)
+- ✅ Better security with user-level MFA and conditional access
+
+**Requirements:**
+- User must be able to authenticate via browser (device code flow)
+- Does NOT require CLIENT_SECRET
+
+**Supported services:** All (Outlook, Calendar, OneDrive, SharePoint, Teams, Excel, Word, OneNote)
+
+### 2. App-Only Authentication (For Automation & Background Services)
+
+**How it works:**
+- Uses **OAuth 2.0 Client Credentials Flow** (application-only)
+- Authenticates as the application itself, not a user
+- Requires specifying which user's data to access
+- No interactive authentication needed
+
+**When to use:**
+- ✅ Automated background services (scheduled jobs, batch processing)
+- ✅ Headless environments (Docker, serverless functions, CI/CD)
+- ✅ Multi-user administrative operations
+- ✅ Shared mailbox or resource management
+- ✅ 24/7 services without user sessions
+- ✅ SaaS applications serving multiple organizations
+
+**Requirements:**
+- CLIENT_SECRET (application secret key)
+- USER_PRINCIPAL_NAME or USER_ID (to specify which user's data to access)
+- Admin consent for application permissions
+
+**Supported services:** Outlook, Calendar, OneDrive, SharePoint, Excel, Word
+**Limited support:** Teams (some features), OneNote (deprecated March 31, 2025)
+
+**⚠️ Security Note:** App-only authentication has higher privilege and should only be used when delegated auth is not feasible. Secure the CLIENT_SECRET carefully.
+
+---
+
+**For Claude Desktop and interactive use: Choose Delegated Authentication**
+**For automation and background services: Choose App-Only Authentication**
 
 ## Setup
 
