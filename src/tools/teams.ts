@@ -205,6 +205,9 @@ export class TeamsTools {
    * Add member to team
    */
   async addTeamMember(teamId: string, userId: string, roles: string[] = []): Promise<any> {
+    validateResourceId(teamId, 'team');
+    validateResourceId(userId, 'user');
+
     const member = await this.graphClient
       .api(`/teams/${teamId}/members`)
       .post({
@@ -220,6 +223,9 @@ export class TeamsTools {
    * Remove member from team
    */
   async removeTeamMember(teamId: string, membershipId: string): Promise<void> {
+    validateResourceId(teamId, 'team');
+    validateResourceId(membershipId, 'membership');
+
     await this.graphClient
       .api(`/teams/${teamId}/members/${membershipId}`)
       .delete();

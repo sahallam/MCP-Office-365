@@ -4,6 +4,7 @@
 
 import { Client } from '@microsoft/microsoft-graph-client';
 import { CalendarEvent } from '../types.js';
+import { validateResourceId } from '../security.js';
 
 export class CalendarTools {
   constructor(private graphClient: Client, private userId: string) {}
@@ -62,6 +63,8 @@ export class CalendarTools {
    * Get a specific event by ID
    */
   async getEvent(eventId: string): Promise<CalendarEvent> {
+    validateResourceId(eventId, 'event');
+
     const event = await this.graphClient
       .api(`${this.getUserPath()}/calendar/events/${eventId}`)
       .get();
@@ -94,6 +97,8 @@ export class CalendarTools {
    * Update a calendar event
    */
   async updateEvent(eventId: string, updates: Partial<CalendarEvent>): Promise<CalendarEvent> {
+    validateResourceId(eventId, 'event');
+
     const updatedEvent = await this.graphClient
       .api(`${this.getUserPath()}/calendar/events/${eventId}`)
       .patch(updates);
@@ -105,6 +110,8 @@ export class CalendarTools {
    * Delete a calendar event
    */
   async deleteEvent(eventId: string): Promise<void> {
+    validateResourceId(eventId, 'event');
+
     await this.graphClient
       .api(`${this.getUserPath()}/calendar/events/${eventId}`)
       .delete();
@@ -114,6 +121,8 @@ export class CalendarTools {
    * Accept a meeting
    */
   async acceptMeeting(eventId: string, comment?: string): Promise<void> {
+    validateResourceId(eventId, 'event');
+
     await this.graphClient
       .api(`${this.getUserPath()}/events/${eventId}/accept`)
       .post({
@@ -126,6 +135,8 @@ export class CalendarTools {
    * Decline a meeting
    */
   async declineMeeting(eventId: string, comment?: string): Promise<void> {
+    validateResourceId(eventId, 'event');
+
     await this.graphClient
       .api(`${this.getUserPath()}/events/${eventId}/decline`)
       .post({
@@ -138,6 +149,8 @@ export class CalendarTools {
    * Tentatively accept a meeting
    */
   async tentativelyAcceptMeeting(eventId: string, comment?: string): Promise<void> {
+    validateResourceId(eventId, 'event');
+
     await this.graphClient
       .api(`${this.getUserPath()}/events/${eventId}/tentativelyAccept`)
       .post({
