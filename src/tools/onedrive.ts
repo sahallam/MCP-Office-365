@@ -4,6 +4,7 @@
 
 import { Client } from '@microsoft/microsoft-graph-client';
 import { DriveItem } from '../types.js';
+import { sanitizeSearchQuery, validateResourceId, validateFileSize, SIZE_LIMITS } from '../security.js';
 
 export class OneDriveTools {
   constructor(private graphClient: Client, private userId: string) {}
@@ -36,6 +37,8 @@ export class OneDriveTools {
    * Get item by ID
    */
   async getItem(itemId: string): Promise<DriveItem> {
+    validateResourceId(itemId, 'item');
+
     const item = await this.graphClient
       .api(`${this.getUserPath()}/drive/items/${itemId}`)
       .get();
@@ -58,6 +61,8 @@ export class OneDriveTools {
    * Download file content
    */
   async downloadFile(itemId: string): Promise<ArrayBuffer> {
+    validateResourceId(itemId, 'item');
+
     const content = await this.graphClient
       .api(`${this.getUserPath()}/drive/items/${itemId}/content`)
       .get();
@@ -73,9 +78,10 @@ export class OneDriveTools {
     content: Buffer | string,
     parentFolderId?: string
   ): Promise<DriveItem> {
-    const endpoint = parentFolderId
-      ? `${this.getUserPath()}/drive/items/${parentFolderId}:/${fileName}:/content`
-      : `${this.getUserPath()}/drive/root:/${fileName}:/content`;
+    // Validate parent folder ID if provided
+    if (parentFolderId) {
+      validateResourceId(parentFolderId, 'folder');
+    }
 
     // Convert base64 string to Buffer if needed
     let uploadContent: Buffer;
@@ -85,6 +91,13 @@ export class OneDriveTools {
     } else {
       uploadContent = content;
     }
+
+    // Validate file size
+    validateFileSize(uploadContent.length, SIZE_LIMITS.MAX_FILE_SIZE, 'File');
+
+    const endpoint = parentFolderId
+      ? `${this.getUserPath()}/drive/items/${parentFolderId}:/${fileName}:/content`
+      : `${this.getUserPath()}/drive/root:/${fileName}:/content`;
 
     const uploadedFile = await this.graphClient
       .api(endpoint)
@@ -117,6 +130,8 @@ export class OneDriveTools {
    * Delete an item
    */
   async deleteItem(itemId: string): Promise<void> {
+    validateResourceId(itemId, 'item');
+
     await this.graphClient
       .api(`${this.getUserPath()}/drive/items/${itemId}`)
       .delete();
@@ -166,8 +181,11 @@ export class OneDriveTools {
    * Search for items
    */
   async searchItems(query: string): Promise<DriveItem[]> {
+    // Sanitize search query to prevent OData injection
+    const sanitizedQuery = sanitizeSearchQuery(query);
+
     const result = await this.graphClient
-      .api(`${this.getUserPath()}/drive/root/search(q='${query}')`)
+      .api(`${this.getUserPath()}/drive/root/search(q='${sanitizedQuery}')`)
       .select(['id', 'name', 'size', 'webUrl', 'folder', 'file'])
       .get();
 
@@ -178,6 +196,8 @@ export class OneDriveTools {
    * Share an item (create sharing link)
    */
   async shareItem(itemId: string, type: 'view' | 'edit' = 'view', scope: 'anonymous' | 'organization' = 'organization'): Promise<string> {
+    validateResourceId(itemId, 'item');
+
     const result = await this.graphClient
       .api(`${this.getUserPath()}/drive/items/${itemId}/createLink`)
       .post({

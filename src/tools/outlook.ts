@@ -4,6 +4,7 @@
 
 import { Client } from '@microsoft/microsoft-graph-client';
 import { EmailMessage } from '../types.js';
+import { sanitizeSearchQuery, validateResourceId, validateContentLength, SIZE_LIMITS } from '../security.js';
 
 export class OutlookTools {
   constructor(private graphClient: Client, private userId: string) {}
@@ -50,6 +51,8 @@ export class OutlookTools {
    * Get a specific email by ID
    */
   async getEmail(messageId: string): Promise<EmailMessage> {
+    validateResourceId(messageId, 'message');
+
     const message = await this.graphClient
       .api(`${this.getUserPath()}/messages/${messageId}`)
       .get();
@@ -61,6 +64,10 @@ export class OutlookTools {
    * Send an email
    */
   async sendEmail(message: EmailMessage): Promise<void> {
+    // Validate email size limits
+    validateContentLength(message.subject, SIZE_LIMITS.MAX_EMAIL_SUBJECT_SIZE, 'Email subject');
+    validateContentLength(message.body.content, SIZE_LIMITS.MAX_EMAIL_BODY_SIZE, 'Email body');
+
     const mailObject = {
       message: {
         subject: message.subject,
@@ -85,6 +92,9 @@ export class OutlookTools {
    * Reply to an email
    */
   async replyToEmail(messageId: string, comment: string, replyAll: boolean = false): Promise<void> {
+    validateResourceId(messageId, 'message');
+    validateContentLength(comment, SIZE_LIMITS.MAX_EMAIL_BODY_SIZE, 'Reply comment');
+
     const endpoint = replyAll ? 'replyAll' : 'reply';
 
     await this.graphClient
@@ -98,9 +108,12 @@ export class OutlookTools {
    * Search emails
    */
   async searchEmails(searchQuery: string, top: number = 10): Promise<EmailMessage[]> {
+    // Sanitize search query to prevent OData injection
+    const sanitizedQuery = sanitizeSearchQuery(searchQuery);
+
     const result = await this.graphClient
       .api(`${this.getUserPath()}/messages`)
-      .search(`"${searchQuery}"`)
+      .search(`"${sanitizedQuery}"`)
       .top(top)
       .select(['id', 'subject', 'from', 'receivedDateTime', 'bodyPreview', 'hasAttachments'])
       .get();
@@ -112,6 +125,8 @@ export class OutlookTools {
    * Mark email as read/unread
    */
   async markEmailAsRead(messageId: string, isRead: boolean = true): Promise<void> {
+    validateResourceId(messageId, 'message');
+
     await this.graphClient
       .api(`${this.getUserPath()}/messages/${messageId}`)
       .patch({
@@ -123,6 +138,8 @@ export class OutlookTools {
    * Delete an email
    */
   async deleteEmail(messageId: string): Promise<void> {
+    validateResourceId(messageId, 'message');
+
     await this.graphClient
       .api(`${this.getUserPath()}/messages/${messageId}`)
       .delete();
@@ -132,6 +149,9 @@ export class OutlookTools {
    * Move email to folder
    */
   async moveEmail(messageId: string, destinationFolderId: string): Promise<void> {
+    validateResourceId(messageId, 'message');
+    validateResourceId(destinationFolderId, 'folder');
+
     await this.graphClient
       .api(`${this.getUserPath()}/messages/${messageId}/move`)
       .post({

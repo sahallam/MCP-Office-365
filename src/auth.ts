@@ -93,7 +93,29 @@ export class GraphAuthProvider {
         userId: this.config.userPrincipalName || this.config.userId,
         account,
       };
-      fs.writeFileSync(this.tokenCachePath, JSON.stringify(cache, null, 2));
+
+      // Write to temporary file with restrictive permissions first
+      const tempPath = this.tokenCachePath + '.tmp';
+
+      // Write with restrictive permissions (0600 = read/write for owner only)
+      fs.writeFileSync(tempPath, JSON.stringify(cache, null, 2), { mode: 0o600 });
+
+      // Atomically rename to final location
+      fs.renameSync(tempPath, this.tokenCachePath);
+
+      // Verify permissions on the final file
+      try {
+        const stats = fs.statSync(this.tokenCachePath);
+        const permissions = stats.mode & 0o777;
+        if (permissions !== 0o600) {
+          console.error(`[AUTH] WARNING: Token cache file has insecure permissions (${permissions.toString(8)}). Expected 0600.`);
+          // Try to fix permissions
+          fs.chmodSync(this.tokenCachePath, 0o600);
+        }
+      } catch (permError) {
+        console.error('[AUTH] Failed to verify/fix token cache permissions:', permError);
+      }
+
       console.error(`[AUTH] Saved tokens to cache: ${this.tokenCachePath}`);
     } catch (error) {
       console.error(`[AUTH] Failed to save tokens to cache (${this.tokenCachePath}):`, error);

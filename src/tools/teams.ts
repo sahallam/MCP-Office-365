@@ -4,6 +4,7 @@
 
 import { Client } from '@microsoft/microsoft-graph-client';
 import { TeamsChannel, TeamsMessage } from '../types.js';
+import { validateResourceId, sanitizeHtmlContent, validateContentLength, SIZE_LIMITS } from '../security.js';
 
 export class TeamsTools {
   constructor(private graphClient: Client, private userId: string) {}
@@ -31,6 +32,8 @@ export class TeamsTools {
    * Get a specific team
    */
   async getTeam(teamId: string): Promise<any> {
+    validateResourceId(teamId, 'team');
+
     const team = await this.graphClient
       .api(`/teams/${teamId}`)
       .get();
@@ -42,6 +45,8 @@ export class TeamsTools {
    * List channels in a team
    */
   async listChannels(teamId: string): Promise<TeamsChannel[]> {
+    validateResourceId(teamId, 'team');
+
     const result = await this.graphClient
       .api(`/teams/${teamId}/channels`)
       .get();
@@ -53,6 +58,9 @@ export class TeamsTools {
    * Get a specific channel
    */
   async getChannel(teamId: string, channelId: string): Promise<TeamsChannel> {
+    validateResourceId(teamId, 'team');
+    validateResourceId(channelId, 'channel');
+
     const channel = await this.graphClient
       .api(`/teams/${teamId}/channels/${channelId}`)
       .get();
@@ -78,6 +86,9 @@ export class TeamsTools {
    * List messages in a channel
    */
   async listChannelMessages(teamId: string, channelId: string, top: number = 50): Promise<TeamsMessage[]> {
+    validateResourceId(teamId, 'team');
+    validateResourceId(channelId, 'channel');
+
     const result = await this.graphClient
       .api(`/teams/${teamId}/channels/${channelId}/messages`)
       .top(top)
@@ -90,6 +101,10 @@ export class TeamsTools {
    * Get a specific message
    */
   async getMessage(teamId: string, channelId: string, messageId: string): Promise<TeamsMessage> {
+    validateResourceId(teamId, 'team');
+    validateResourceId(channelId, 'channel');
+    validateResourceId(messageId, 'message');
+
     const message = await this.graphClient
       .api(`/teams/${teamId}/channels/${channelId}/messages/${messageId}`)
       .get();
@@ -101,12 +116,26 @@ export class TeamsTools {
    * Send a message to a channel
    */
   async sendChannelMessage(teamId: string, channelId: string, content: string, contentType: 'html' | 'text' = 'text'): Promise<TeamsMessage> {
+    validateResourceId(teamId, 'team');
+    validateResourceId(channelId, 'channel');
+    validateContentLength(content, SIZE_LIMITS.MAX_TEAMS_MESSAGE_SIZE, 'Teams message');
+
+    let sanitizedContent = content;
+
+    // Sanitize HTML content to prevent XSS
+    if (contentType === 'html') {
+      sanitizedContent = sanitizeHtmlContent(content, [
+        'p', 'br', 'strong', 'em', 'u', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3',
+        'blockquote', 'code', 'pre', 'div', 'span'
+      ]);
+    }
+
     const message = await this.graphClient
       .api(`/teams/${teamId}/channels/${channelId}/messages`)
       .post({
         body: {
           contentType,
-          content,
+          content: sanitizedContent,
         },
       });
 
@@ -123,12 +152,27 @@ export class TeamsTools {
     content: string,
     contentType: 'html' | 'text' = 'text'
   ): Promise<TeamsMessage> {
+    validateResourceId(teamId, 'team');
+    validateResourceId(channelId, 'channel');
+    validateResourceId(messageId, 'message');
+    validateContentLength(content, SIZE_LIMITS.MAX_TEAMS_MESSAGE_SIZE, 'Teams message');
+
+    let sanitizedContent = content;
+
+    // Sanitize HTML content to prevent XSS
+    if (contentType === 'html') {
+      sanitizedContent = sanitizeHtmlContent(content, [
+        'p', 'br', 'strong', 'em', 'u', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3',
+        'blockquote', 'code', 'pre', 'div', 'span'
+      ]);
+    }
+
     const reply = await this.graphClient
       .api(`/teams/${teamId}/channels/${channelId}/messages/${messageId}/replies`)
       .post({
         body: {
           contentType,
-          content,
+          content: sanitizedContent,
         },
       });
 
@@ -197,12 +241,25 @@ export class TeamsTools {
    * Send a chat message (1:1 or group chat)
    */
   async sendChatMessage(chatId: string, content: string, contentType: 'html' | 'text' = 'text'): Promise<TeamsMessage> {
+    validateResourceId(chatId, 'chat');
+    validateContentLength(content, SIZE_LIMITS.MAX_TEAMS_MESSAGE_SIZE, 'Teams message');
+
+    let sanitizedContent = content;
+
+    // Sanitize HTML content to prevent XSS
+    if (contentType === 'html') {
+      sanitizedContent = sanitizeHtmlContent(content, [
+        'p', 'br', 'strong', 'em', 'u', 'a', 'ul', 'ol', 'li', 'h1', 'h2', 'h3',
+        'blockquote', 'code', 'pre', 'div', 'span'
+      ]);
+    }
+
     const message = await this.graphClient
       .api(`/chats/${chatId}/messages`)
       .post({
         body: {
           contentType,
-          content,
+          content: sanitizedContent,
         },
       });
 
