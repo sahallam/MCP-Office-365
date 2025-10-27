@@ -507,15 +507,80 @@ To enable verbose logging, set the `DEBUG` environment variable:
 DEBUG=* npm start
 ```
 
-## Security Considerations
+## Security Architecture
 
-- **Never commit** your `.env` file or `.token-cache.json` to version control
-- **Token cache**: The `.token-cache.json` file contains access tokens - keep it secure
-- **Rotate client secrets** regularly (app-only mode)
-- **Use least privilege**: Only grant necessary permissions
-- **Monitor access**: Review Microsoft Entra ID sign-in logs regularly
-- **Secure storage**: Store credentials securely (use Azure Key Vault in production)
-- **Delegated auth**: Tokens are tied to the signed-in user - ensure the user has appropriate access
+This server implements enterprise-grade security following OWASP Top 10 (2021) guidelines.
+
+### Authentication & Token Management
+
+**Secure Token Storage**
+- All tokens are encrypted at rest using AES-256-GCM
+- Token cache files have restrictive permissions (0600 - owner read/write only)
+- Supports custom encryption keys via `TOKEN_ENCRYPTION_KEY` environment variable
+- Automatic token expiration and refresh handling
+- Token revocation on logout with complete cache cleanup
+
+**Authentication Modes**
+- OAuth 2.0 with Microsoft Identity Platform
+- Delegated: Device Code Flow (user authentication)
+- App-Only: Client Credentials Flow (application authentication)
+- Automatic token validation and refresh
+
+### Data Protection
+
+**Encryption**
+- TLS 1.2/1.3 enforced for all API communications
+- Insecure SSL/TLS versions disabled (SSLv2, SSLv3, TLS 1.0, TLS 1.1)
+- Strong cipher suites only (AES-GCM, ChaCha20-Poly1305)
+- Certificate validation enforced
+
+**Input Validation**
+- Comprehensive validation for all user inputs
+- Protection against injection attacks (OData, XSS, SQL)
+- Resource ID validation with pattern matching
+- File size limits enforced
+- Path traversal prevention
+
+**Content Sanitization**
+- HTML content sanitization for OneNote and Teams
+- Search query sanitization for all search operations
+- Excel formula injection prevention
+- URL validation and SSRF protection
+
+### Audit Logging
+
+**Security Event Logging**
+- Authentication events (login, logout, token operations)
+- Resource access tracking (read, create, update, delete)
+- Security violations and failed validations
+- Automatic log rotation (90-day retention by default)
+- Logs stored in `~/.office365-mcp/audit/` with secure permissions
+
+**Configuration**
+- Enable/disable: Set `AUDIT_ENABLED=true/false`
+- Debug mode: Set `DEBUG_AUDIT=true` for verbose logging
+- Logs are JSON formatted for easy parsing and analysis
+
+### Best Practices
+
+**Credential Management**
+- **Never commit** `.env` files or token caches to version control
+- Use Azure Key Vault or similar for production credentials
+- Set `TOKEN_ENCRYPTION_KEY` for enhanced token security
+- Rotate client secrets regularly (app-only mode)
+
+**Access Control**
+- Apply least privilege principle - only grant necessary permissions
+- Use delegated authentication when possible (user context)
+- Monitor access via Microsoft Entra ID sign-in logs
+- Review audit logs regularly for suspicious activity
+
+**Operational Security**
+- Keep dependencies updated (`npm audit`)
+- Review Microsoft Graph API permissions periodically
+- Use app-only authentication only when necessary
+- Implement rate limiting for high-volume operations
+- Secure the token cache directory permissions
 
 ## Limitations
 
