@@ -160,12 +160,13 @@ Choose the permissions based on your authentication mode:
 
 Add these **Delegated Permissions**:
 - `Calendars.ReadWrite`
+- `Channel.Create` (for creating Teams channels)
 - `Channel.ReadBasic.All`
 - `ChannelMessage.Read.All`
+- `ChannelMessage.Send` (for sending Teams channel messages)
 - `Chat.Read`
 - `Chat.ReadWrite`
 - `Files.ReadWrite.All`
-- `Group.ReadWrite.All` (required for sending Teams channel messages)
 - `Mail.ReadWrite`
 - `Mail.Send`
 - `Notes.Read.All`
@@ -173,6 +174,7 @@ Add these **Delegated Permissions**:
 - `Sites.Read.All`
 - `Sites.ReadWrite.All`
 - `Team.ReadBasic.All`
+- `TeamMember.Read.All` (for reading team members)
 - `TeamSettings.Read.All`
 - `TeamSettings.ReadWrite.All`
 - `User.Read`
@@ -181,6 +183,8 @@ Add these **Delegated Permissions**:
 After adding permissions, click **Grant admin consent** for your organization.
 
 > **Note**: With delegated auth, the user will be prompted to consent to these permissions when they first sign in via device code flow.
+>
+> **Security Note**: We use granular permissions like `ChannelMessage.Send` instead of the overly broad `Group.ReadWrite.All` which would grant access to ALL groups in your organization.
 
 #### For App-Only Authentication
 
@@ -189,10 +193,8 @@ Add these **Application Permissions**:
 - `Calendars.ReadWrite`
 - `Channel.ReadBasic.All`
 - `ChannelMessage.Read.All`
-- `ChannelMessage.Send` (for sending Teams messages as the user)
 - `Files.Read.All`
 - `Files.ReadWrite.All`
-- `Group.ReadWrite.All` (required for Teams operations)
 - `Mail.Read`
 - `Mail.ReadWrite`
 - `Mail.Send`
@@ -202,13 +204,20 @@ Add these **Application Permissions**:
 - `Sites.Read.All`
 - `Sites.ReadWrite.All`
 - `Team.ReadBasic.All`
+- `TeamMember.Read.All`
 - `TeamSettings.Read.All`
 - `TeamSettings.ReadWrite.All`
 - `User.Read.All`
 
 After adding permissions, click **Grant admin consent** for your organization.
 
-> **Important**: App-only mode has limited Teams support and OneNote will stop working on March 31, 2025.
+> **Important Teams Limitations with App-Only Auth:**
+> - **Cannot send messages** to Teams channels with application permissions (Microsoft restriction)
+> - Can only read channels, messages, and team info
+> - For automated message sending, use [Incoming Webhooks](https://learn.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook) instead
+> - OneNote will stop working on March 31, 2025
+>
+> **Security Note**: We do NOT use `Group.ReadWrite.All` which would grant excessive access to ALL groups. We use specific permissions for the operations we need.
 
 ### 3. Create Client Secret (App-Only Mode Only)
 
