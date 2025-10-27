@@ -4,6 +4,7 @@
 
 import { Client } from '@microsoft/microsoft-graph-client';
 import { ExcelWorkbook, ExcelWorksheet } from '../types.js';
+import { validateResourceId, validateExcelAddress } from '../security.js';
 
 export class ExcelTools {
   constructor(private graphClient: Client, private userId: string) {}
@@ -20,6 +21,8 @@ export class ExcelTools {
    * Get workbook metadata
    */
   async getWorkbook(itemId: string): Promise<ExcelWorkbook> {
+    validateResourceId(itemId, 'workbook');
+
     const workbook = await this.graphClient
       .api(`${this.getUserPath()}/drive/items/${itemId}/workbook`)
       .get();
@@ -31,6 +34,8 @@ export class ExcelTools {
    * List worksheets in a workbook
    */
   async listWorksheets(itemId: string): Promise<ExcelWorksheet[]> {
+    validateResourceId(itemId, 'workbook');
+
     const result = await this.graphClient
       .api(`${this.getUserPath()}/drive/items/${itemId}/workbook/worksheets`)
       .get();
@@ -66,6 +71,10 @@ export class ExcelTools {
    * Get range values from a worksheet
    */
   async getRange(itemId: string, worksheetId: string, address: string): Promise<any> {
+    validateResourceId(itemId, 'workbook');
+    validateResourceId(worksheetId, 'worksheet');
+    validateExcelAddress(address);
+
     const range = await this.graphClient
       .api(`${this.getUserPath()}/drive/items/${itemId}/workbook/worksheets/${worksheetId}/range(address='${address}')`)
       .get();
@@ -77,6 +86,10 @@ export class ExcelTools {
    * Update range values in a worksheet
    */
   async updateRange(itemId: string, worksheetId: string, address: string, values: any[][]): Promise<any> {
+    validateResourceId(itemId, 'workbook');
+    validateResourceId(worksheetId, 'worksheet');
+    validateExcelAddress(address);
+
     const range = await this.graphClient
       .api(`${this.getUserPath()}/drive/items/${itemId}/workbook/worksheets/${worksheetId}/range(address='${address}')`)
       .patch({
@@ -90,6 +103,9 @@ export class ExcelTools {
    * Get used range (non-empty cells) from a worksheet
    */
   async getUsedRange(itemId: string, worksheetId: string): Promise<any> {
+    validateResourceId(itemId, 'workbook');
+    validateResourceId(worksheetId, 'worksheet');
+
     const range = await this.graphClient
       .api(`${this.getUserPath()}/drive/items/${itemId}/workbook/worksheets/${worksheetId}/usedRange`)
       .get();

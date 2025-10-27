@@ -125,25 +125,23 @@ Choose the permissions based on your authentication mode:
 #### For Delegated Authentication (Recommended)
 
 Add these **Delegated Permissions**:
-- `User.Read`
-- `Mail.ReadWrite`
-- `Mail.Send`
 - `Calendars.ReadWrite`
-- `Files.ReadWrite.All`
-- `Notes.ReadWrite.All` (for OneNote)
-- `Team.ReadBasic.All`
 - `Channel.ReadBasic.All`
 - `ChannelMessage.Read.All`
 - `Chat.Read`
 - `Chat.ReadWrite`
+- `Files.ReadWrite.All`
+- `Group.ReadWrite.All` (required for sending Teams channel messages)
+- `Mail.ReadWrite`
+- `Mail.Send`
+- `Notes.Read.All`
+- `Notes.ReadWrite.All` (for OneNote)
 - `Sites.Read.All`
 - `Sites.ReadWrite.All`
+- `Team.ReadBasic.All`
 - `TeamSettings.Read.All`
 - `TeamSettings.ReadWrite.All`
-- `ChannelMessage.Read.All`
-- `Group.ReadWrite.All` (required for sending Teams channel messages)
-- `Notes.Read.All`
-- `Notes.ReadWrite.All`
+- `User.Read`
 - `User.Read.All`
 
 After adding permissions, click **Grant admin consent** for your organization.
@@ -153,26 +151,26 @@ After adding permissions, click **Grant admin consent** for your organization.
 #### For App-Only Authentication
 
 Add these **Application Permissions**:
+- `Calendars.Read`
+- `Calendars.ReadWrite`
+- `Channel.ReadBasic.All`
+- `ChannelMessage.Read.All`
+- `ChannelMessage.Send` (for sending Teams messages as the user)
+- `Files.Read.All`
+- `Files.ReadWrite.All`
+- `Group.ReadWrite.All` (required for Teams operations)
 - `Mail.Read`
 - `Mail.ReadWrite`
 - `Mail.Send`
-- `Calendars.Read`
-- `Calendars.ReadWrite`
-- `Files.Read.All`
-- `Files.ReadWrite.All`
-- `Sites.Read.All`
-- `Sites.ReadWrite.All`
-- `TeamSettings.Read.All`
-- `TeamSettings.ReadWrite.All`
-- `ChannelMessage.Read.All`
-- `Group.ReadWrite.All` (required for Teams operations)
-- `User.Read.All`
-- `ChannelMessage.Send` (for sending Teams messages as the user)
-- `Team.ReadBasic.All`
-- `Channel.ReadBasic.All`
+- `Notes.Create`
 - `Notes.Read`
 - `Notes.ReadWrite`
-- `Notes.Create`
+- `Sites.Read.All`
+- `Sites.ReadWrite.All`
+- `Team.ReadBasic.All`
+- `TeamSettings.Read.All`
+- `TeamSettings.ReadWrite.All`
+- `User.Read.All`
 
 After adding permissions, click **Grant admin consent** for your organization.
 

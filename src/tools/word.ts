@@ -4,6 +4,7 @@
 
 import { Client } from '@microsoft/microsoft-graph-client';
 import { WordDocument } from '../types.js';
+import { sanitizeSearchQuery, validateResourceId } from '../security.js';
 
 export class WordTools {
   constructor(private graphClient: Client, private userId: string) {}
@@ -20,6 +21,8 @@ export class WordTools {
    * Get Word document metadata
    */
   async getDocument(itemId: string): Promise<WordDocument> {
+    validateResourceId(itemId, 'document');
+
     const document = await this.graphClient
       .api(`${this.getUserPath()}/drive/items/${itemId}`)
       .get();
@@ -36,6 +39,8 @@ export class WordTools {
    * Note: This downloads the file content. For large files, consider streaming.
    */
   async getDocumentContent(itemId: string): Promise<ArrayBuffer> {
+    validateResourceId(itemId, 'document');
+
     const content = await this.graphClient
       .api(`${this.getUserPath()}/drive/items/${itemId}/content`)
       .get();
@@ -47,6 +52,8 @@ export class WordTools {
    * Convert Word document to PDF
    */
   async convertToPdf(itemId: string): Promise<ArrayBuffer> {
+    validateResourceId(itemId, 'document');
+
     const pdfContent = await this.graphClient
       .api(`${this.getUserPath()}/drive/items/${itemId}/content?format=pdf`)
       .get();
@@ -58,8 +65,11 @@ export class WordTools {
    * Search for Word documents
    */
   async searchDocuments(query: string): Promise<WordDocument[]> {
+    // Sanitize search query to prevent OData injection
+    const sanitizedQuery = sanitizeSearchQuery(query);
+
     const result = await this.graphClient
-      .api(`${this.getUserPath()}/drive/root/search(q='${query}')`)
+      .api(`${this.getUserPath()}/drive/root/search(q='${sanitizedQuery}')`)
       .filter("file/mimeType eq 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'")
       .select(['id', 'name', 'webUrl'])
       .get();
@@ -94,6 +104,9 @@ export class WordTools {
    * Copy a Word document
    */
   async copyDocument(itemId: string, parentFolderId: string, newName?: string): Promise<void> {
+    validateResourceId(itemId, 'document');
+    validateResourceId(parentFolderId, 'folder');
+
     const requestBody: any = {
       parentReference: {
         id: parentFolderId,
@@ -113,6 +126,8 @@ export class WordTools {
    * Get document permissions/sharing info
    */
   async getPermissions(itemId: string): Promise<any[]> {
+    validateResourceId(itemId, 'document');
+
     const result = await this.graphClient
       .api(`${this.getUserPath()}/drive/items/${itemId}/permissions`)
       .get();
@@ -128,6 +143,8 @@ export class WordTools {
     type: 'view' | 'edit' = 'view',
     scope: 'anonymous' | 'organization' = 'organization'
   ): Promise<string> {
+    validateResourceId(itemId, 'document');
+
     const result = await this.graphClient
       .api(`${this.getUserPath()}/drive/items/${itemId}/createLink`)
       .post({

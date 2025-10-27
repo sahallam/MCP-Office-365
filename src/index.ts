@@ -25,6 +25,7 @@ import { ExcelTools } from './tools/excel.js';
 import { WordTools } from './tools/word.js';
 import { OneNoteTools } from './tools/onenote.js';
 import { GraphConfig } from './types.js';
+import { getPublicErrorMessage } from './security.js';
 
 // Load environment variables
 dotenv.config();
@@ -876,11 +877,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       ],
     };
   } catch (error) {
+    // Log detailed error internally for debugging
+    console.error(`[MCP] Tool execution error for ${name}:`, error);
+
+    // Return sanitized error message to user
+    const userMessage = error instanceof Error
+      ? getPublicErrorMessage(error)
+      : 'An unexpected error occurred';
+
     return {
       content: [
         {
           type: 'text',
-          text: `Error: ${error instanceof Error ? error.message : String(error)}`,
+          text: `Error: ${userMessage}`,
         },
       ],
       isError: true,

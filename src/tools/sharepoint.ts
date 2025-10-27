@@ -4,6 +4,7 @@
 
 import { Client } from '@microsoft/microsoft-graph-client';
 import { SharePointSite, DriveItem } from '../types.js';
+import { sanitizeSearchQuery, validateResourceId, validateFileSize, SIZE_LIMITS } from '../security.js';
 
 export class SharePointTools {
   constructor(private graphClient: Client) {}
@@ -12,8 +13,11 @@ export class SharePointTools {
    * Search for SharePoint sites
    */
   async searchSites(query: string): Promise<SharePointSite[]> {
+    // Sanitize search query to prevent injection
+    const sanitizedQuery = sanitizeSearchQuery(query);
+
     const result = await this.graphClient
-      .api(`/sites?search=${query}`)
+      .api(`/sites?search=${encodeURIComponent(sanitizedQuery)}`)
       .get();
 
     return result.value;
@@ -23,6 +27,8 @@ export class SharePointTools {
    * Get a site by ID
    */
   async getSite(siteId: string): Promise<SharePointSite> {
+    validateResourceId(siteId, 'site');
+
     const site = await this.graphClient
       .api(`/sites/${siteId}`)
       .get();
@@ -34,6 +40,10 @@ export class SharePointTools {
    * Get site by hostname and path
    */
   async getSiteByPath(hostname: string, serverRelativePath: string): Promise<SharePointSite> {
+    // Validate hostname to prevent SSRF
+    this.validateSharePointHostname(hostname);
+    validateResourceId(serverRelativePath, 'path');
+
     const site = await this.graphClient
       .api(`/sites/${hostname}:${serverRelativePath}`)
       .get();
@@ -42,9 +52,36 @@ export class SharePointTools {
   }
 
   /**
+   * Validate SharePoint hostname to prevent SSRF
+   */
+  private validateSharePointHostname(hostname: string): void {
+    if (!hostname || typeof hostname !== 'string') {
+      throw new Error('Invalid hostname: must be a non-empty string');
+    }
+
+    // Only allow SharePoint domains
+    const allowedDomains = ['.sharepoint.com', '.sharepoint-df.com'];
+    if (!allowedDomains.some(domain => hostname.endsWith(domain))) {
+      throw new Error('Invalid SharePoint hostname: must be a sharepoint.com domain');
+    }
+
+    // Prevent internal network access
+    if (hostname.match(/^(localhost|127\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.)/i)) {
+      throw new Error('Access to internal network not allowed');
+    }
+
+    // Prevent other suspicious patterns
+    if (hostname.includes('@') || hostname.includes(':') || hostname.includes('/')) {
+      throw new Error('Invalid hostname format');
+    }
+  }
+
+  /**
    * List document libraries (drives) in a site
    */
   async listDocumentLibraries(siteId: string): Promise<any[]> {
+    validateResourceId(siteId, 'site');
+
     const result = await this.graphClient
       .api(`/sites/${siteId}/drives`)
       .get();
@@ -56,6 +93,12 @@ export class SharePointTools {
    * List items in a document library
    */
   async listLibraryItems(siteId: string, driveId: string, folderId?: string): Promise<DriveItem[]> {
+    validateResourceId(siteId, 'site');
+    validateResourceId(driveId, 'drive');
+    if (folderId) {
+      validateResourceId(folderId, 'folder');
+    }
+
     const endpoint = folderId
       ? `/sites/${siteId}/drives/${driveId}/items/${folderId}/children`
       : `/sites/${siteId}/drives/${driveId}/root/children`;
@@ -78,18 +121,26 @@ export class SharePointTools {
     content: Buffer | string,
     parentFolderId?: string
   ): Promise<DriveItem> {
-    const endpoint = parentFolderId
-      ? `/sites/${siteId}/drives/${driveId}/items/${parentFolderId}:/${fileName}:/content`
-      : `/sites/${siteId}/drives/${driveId}/root:/${fileName}:/content`;
+    validateResourceId(siteId, 'site');
+    validateResourceId(driveId, 'drive');
+    if (parentFolderId) {
+      validateResourceId(parentFolderId, 'folder');
+    }
 
     // Convert base64 string to Buffer if needed
     let uploadContent: Buffer;
     if (typeof content === 'string') {
-      // Assume base64 encoding for string content
       uploadContent = Buffer.from(content, 'base64');
     } else {
       uploadContent = content;
     }
+
+    // Validate file size
+    validateFileSize(uploadContent.length, SIZE_LIMITS.MAX_FILE_SIZE, 'File');
+
+    const endpoint = parentFolderId
+      ? `/sites/${siteId}/drives/${driveId}/items/${parentFolderId}:/${fileName}:/content`
+      : `/sites/${siteId}/drives/${driveId}/root:/${fileName}:/content`;
 
     const uploadedFile = await this.graphClient
       .api(endpoint)
@@ -103,6 +154,10 @@ export class SharePointTools {
    * Download file from SharePoint
    */
   async downloadFile(siteId: string, driveId: string, itemId: string): Promise<ArrayBuffer> {
+    validateResourceId(siteId, 'site');
+    validateResourceId(driveId, 'drive');
+    validateResourceId(itemId, 'item');
+
     const content = await this.graphClient
       .api(`/sites/${siteId}/drives/${driveId}/items/${itemId}/content`)
       .get();
