@@ -64,19 +64,42 @@ export class AuditLogger {
   private enabled: boolean = true;
 
   private constructor() {
-    // Create audit logs directory in user's home
-    const auditDir = path.join(os.homedir(), '.office365-mcp', 'audit');
-    if (!fs.existsSync(auditDir)) {
-      fs.mkdirSync(auditDir, { recursive: true, mode: 0o700 });
-    }
-
-    // Create log file with date
-    const logFileName = `audit-${new Date().toISOString().split('T')[0]}.log`;
-    this.logPath = path.join(auditDir, logFileName);
-
     // Disable audit logging if AUDIT_ENABLED env var is set to false
     if (process.env.AUDIT_ENABLED === 'false') {
       this.enabled = false;
+      this.logPath = ''; // Not used when disabled
+      return;
+    }
+
+    try {
+      // Try to create audit logs directory in user's home
+      const auditDir = path.join(os.homedir(), '.office365-mcp', 'audit');
+      if (!fs.existsSync(auditDir)) {
+        fs.mkdirSync(auditDir, { recursive: true, mode: 0o700 });
+      }
+
+      // Create log file with date
+      const logFileName = `audit-${new Date().toISOString().split('T')[0]}.log`;
+      this.logPath = path.join(auditDir, logFileName);
+    } catch (error) {
+      // If we can't create the audit directory (permission issues, etc.),
+      // fall back to temp directory or disable audit logging
+      console.warn('[AUDIT] Failed to create audit directory in home folder, trying temp directory:', error);
+
+      try {
+        const tempAuditDir = path.join(os.tmpdir(), 'office365-mcp-audit');
+        if (!fs.existsSync(tempAuditDir)) {
+          fs.mkdirSync(tempAuditDir, { recursive: true, mode: 0o700 });
+        }
+        const logFileName = `audit-${new Date().toISOString().split('T')[0]}.log`;
+        this.logPath = path.join(tempAuditDir, logFileName);
+        console.warn(`[AUDIT] Using temporary audit directory: ${tempAuditDir}`);
+      } catch (tempError) {
+        // If we can't even use temp directory, disable audit logging
+        console.error('[AUDIT] Failed to create audit directory, disabling audit logging:', tempError);
+        this.enabled = false;
+        this.logPath = '';
+      }
     }
   }
 
