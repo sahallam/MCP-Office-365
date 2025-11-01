@@ -233,15 +233,16 @@ const TOOLS: Tool[] = [
   },
   {
     name: 'onedrive_upload_file',
-    description: 'Upload a file to OneDrive',
+    description: 'Upload a file to OneDrive. Provide either content (base64 encoded) for small files, or filePath for large files to avoid conversation length limits.',
     inputSchema: {
       type: 'object',
       properties: {
         fileName: { type: 'string', description: 'Name of the file' },
-        content: { type: 'string', description: 'File content (base64 encoded for binary files)' },
+        content: { type: 'string', description: 'File content (base64 encoded for binary files). Optional if filePath is provided.' },
+        filePath: { type: 'string', description: 'Path to local file to upload. Recommended for large files to avoid conversation length limits. Optional if content is provided.' },
         parentFolderId: { type: 'string', description: 'Parent folder ID (optional)' },
       },
-      required: ['fileName', 'content'],
+      required: ['fileName'],
     },
   },
   {
@@ -744,7 +745,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         result = await onedrive.downloadFile((args as any).itemId);
         break;
       case 'onedrive_upload_file':
-        result = await onedrive.uploadFile((args as any).fileName, (args as any).content, (args as any).parentFolderId);
+        result = await onedrive.uploadFile((args as any).fileName, (args as any).content, (args as any).parentFolderId, (args as any).filePath);
         break;
       case 'onedrive_search':
         result = await onedrive.searchItems((args as any).query);
