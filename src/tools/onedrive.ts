@@ -5,6 +5,7 @@
 import { Client } from '@microsoft/microsoft-graph-client';
 import { DriveItem } from '../types.js';
 import { sanitizeSearchQuery, validateResourceId, validateFileSize, SIZE_LIMITS } from '../security.js';
+import * as fs from 'fs';
 
 export class OneDriveTools {
   constructor(private graphClient: Client, private userId: string) {}
@@ -75,30 +76,48 @@ export class OneDriveTools {
    */
   async uploadFile(
     fileName: string,
-    content: Buffer | string,
-    parentFolderId?: string
+    content?: Buffer | string,
+    parentFolderId?: string,
+    filePath?: string
   ): Promise<DriveItem> {
     // Validate parent folder ID if provided
     if (parentFolderId) {
       validateResourceId(parentFolderId, 'folder');
     }
 
-    // Convert base64 string to Buffer if needed
+    // Determine upload content from either filePath or content parameter
     let uploadContent: Buffer;
-    if (typeof content === 'string') {
-      // Assume base64 encoding for string content
-      try {
-        uploadContent = Buffer.from(content, 'base64');
 
-        // Validate that it's actually valid base64
-        if (uploadContent.toString('base64') !== content.replace(/\s/g, '')) {
-          throw new Error('Invalid base64 encoding');
-        }
+    if (filePath) {
+      // Read file from filesystem
+      if (!fs.existsSync(filePath)) {
+        throw new Error(`File not found: ${filePath}`);
+      }
+
+      try {
+        uploadContent = fs.readFileSync(filePath);
       } catch (error) {
-        throw new Error('Invalid base64 string provided for file content');
+        throw new Error(`Failed to read file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    } else if (content) {
+      // Convert base64 string to Buffer if needed
+      if (typeof content === 'string') {
+        // Assume base64 encoding for string content
+        try {
+          uploadContent = Buffer.from(content, 'base64');
+
+          // Validate that it's actually valid base64
+          if (uploadContent.toString('base64') !== content.replace(/\s/g, '')) {
+            throw new Error('Invalid base64 encoding');
+          }
+        } catch (error) {
+          throw new Error('Invalid base64 string provided for file content');
+        }
+      } else {
+        uploadContent = content;
       }
     } else {
-      uploadContent = content;
+      throw new Error('Either content or filePath must be provided');
     }
 
     // Validate file size
