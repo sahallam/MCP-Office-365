@@ -265,19 +265,23 @@ export class GraphAuthProvider {
 
   /**
    * Validate token cache structure (OWASP A08: Data Integrity)
+   * Supports both legacy format (no version field) and new versioned formats
    */
   private validateTokenCache(data: any): data is TokenCache {
     if (!data || typeof data !== 'object') {
       return false;
     }
 
-    // Validate version field
-    if (typeof data.version !== 'number' || data.version < 1) {
+    // Check if version field exists
+    const version = data.version;
+
+    // If version exists, validate it
+    if (version !== undefined && (typeof version !== 'number' || version < 1)) {
       return false;
     }
 
     // Version 2+ uses MSAL cache
-    if (data.version >= 2) {
+    if (version !== undefined && version >= 2) {
       // For version 2+, we just need the MSAL cache data
       if (data.msalCache && typeof data.msalCache !== 'string') {
         return false;
@@ -285,7 +289,8 @@ export class GraphAuthProvider {
       return true;
     }
 
-    // Legacy version 1 validation (backward compatibility)
+    // Legacy format validation (no version field or version 1)
+    // These caches have accessToken and expiresOn fields
     if (typeof data.accessToken !== 'string' || data.accessToken.length === 0) {
       return false;
     }
@@ -321,10 +326,34 @@ export class GraphAuthProvider {
         try {
           // Try to decrypt first (new encrypted format)
           decryptedData = this.decryptTokenCache(fileContent);
-        } catch {
-          // Fall back to unencrypted format (for backward compatibility)
-          console.error('[AUTH] Token cache not encrypted, will re-encrypt on next save');
-          decryptedData = fileContent;
+        } catch (decryptError) {
+          // Decryption failed - could be:
+          // 1. File is in old unencrypted format
+          // 2. Encryption key changed (e.g., machine hostname/username changed)
+          // 3. File is corrupted
+
+          // Try to parse as unencrypted JSON to check if it's valid
+          try {
+            JSON.parse(fileContent);
+            console.error('[AUTH] Token cache is unencrypted (old format), will re-encrypt on next save');
+            decryptedData = fileContent;
+          } catch {
+            // File is not valid JSON - likely corrupted or encryption key changed
+            console.error('[AUTH] ⚠️  Token cache decryption failed - this can happen if:');
+            console.error('[AUTH]     - Your machine hostname or username changed');
+            console.error('[AUTH]     - The cache file is corrupted');
+            console.error('[AUTH]     - You moved the cache file from another machine');
+            console.error('[AUTH] Deleting corrupted cache and starting fresh...');
+
+            // Delete the corrupted cache file
+            try {
+              fs.unlinkSync(this.tokenCachePath);
+              console.error('[AUTH] Corrupted cache file deleted');
+            } catch {
+              // Ignore deletion errors
+            }
+            return;
+          }
         }
 
         // Parse JSON
@@ -344,20 +373,23 @@ export class GraphAuthProvider {
 
         const cache: TokenCache = rawData;
 
+        // Determine cache version (default to 1 if not present for legacy caches)
+        const cacheVersion = cache.version || 1;
+
         // Version 2+ uses MSAL cache plugin (loaded automatically)
-        if (cache.version >= 2) {
+        if (cacheVersion >= 2) {
           console.error('[AUTH] Token cache version 2+ detected - MSAL cache plugin will handle loading');
           return;
         }
 
-        // Legacy version 1 cache - manually load access token
+        // Legacy cache (no version field or version 1) - manually load access token
         if (cache.expiresOn && cache.expiresOn > Date.now()) {
           this.accessToken = cache.accessToken || null;
           this.tokenExpiry = new Date(cache.expiresOn);
           this.userAccount = cache.account;
-          console.error('[AUTH] Loaded cached access token (legacy format)');
+          console.error('[AUTH] Loaded cached access token (legacy format - will be upgraded to version 2 on next authentication)');
         } else {
-          console.error('[AUTH] Cached token expired, will re-authenticate');
+          console.error('[AUTH] Cached token expired, will re-authenticate and upgrade to version 2 format');
         }
       }
     } catch (error) {
