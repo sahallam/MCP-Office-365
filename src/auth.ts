@@ -1,8 +1,14 @@
 /**
  * Microsoft Graph API Authentication
+ *
+ * Token Lifetime Information:
+ * - Access tokens: ~1 hour
+ * - Refresh tokens: Up to 90 days by default (can be extended to 6+ months with Conditional Access policies)
+ * - Refresh tokens are "rolling" - each use before expiry gets you a new refresh token
+ * - As long as the connector is used at least once within the refresh token lifetime, authentication persists
  */
 
-import { ConfidentialClientApplication, PublicClientApplication, DeviceCodeRequest } from '@azure/msal-node';
+import { ConfidentialClientApplication, PublicClientApplication, DeviceCodeRequest, ICachePlugin, TokenCacheContext } from '@azure/msal-node';
 import { Client } from '@microsoft/microsoft-graph-client';
 import { GraphConfig } from './types.js';
 import * as fs from 'fs';
@@ -11,11 +17,39 @@ import * as os from 'os';
 import * as crypto from 'crypto';
 import * as https from 'https';
 
+/**
+ * Enhanced token cache that stores the complete MSAL token cache
+ * This includes refresh tokens, which enables long-term authentication persistence
+ */
 interface TokenCache {
-  accessToken: string;
-  expiresOn: number;
+  // MSAL's complete cache data (includes refresh tokens, accounts, etc.)
+  msalCache?: string;
+
+  // Legacy fields for backward compatibility
+  accessToken?: string;
+  expiresOn?: number;
   userId?: string;
   account?: any;
+
+  // Metadata
+  version: number;
+  lastUpdated: number;
+}
+
+/**
+ * Custom error class for authentication failures
+ * This allows us to provide user-friendly error messages
+ */
+export class AuthenticationError extends Error {
+  public readonly userMessage: string;
+  public readonly requiresReauth: boolean;
+
+  constructor(message: string, userMessage: string, requiresReauth: boolean = false) {
+    super(message);
+    this.name = 'AuthenticationError';
+    this.userMessage = userMessage;
+    this.requiresReauth = requiresReauth;
+  }
 }
 
 export class GraphAuthProvider {
@@ -37,15 +71,21 @@ export class GraphAuthProvider {
     if (authMode === 'delegated') {
       console.error(`[AUTH] Token cache location: ${this.tokenCachePath}`);
 
+      // Create persistent cache plugin
+      const cachePlugin = this.createCachePlugin();
+
       // Use Public Client Application for delegated auth (device code flow)
       this.msalClient = new PublicClientApplication({
         auth: {
           clientId: config.clientId,
           authority: `https://login.microsoftonline.com/${config.tenantId}`,
         },
+        cache: {
+          cachePlugin,
+        },
       });
 
-      // Try to load cached tokens
+      // Try to load cached tokens (this will also restore MSAL's cache)
       this.loadCachedTokens();
     } else {
       // Use Confidential Client Application for app-only auth
@@ -61,6 +101,90 @@ export class GraphAuthProvider {
         },
       });
     }
+  }
+
+  /**
+   * Create a persistent cache plugin for MSAL
+   * This stores the entire MSAL cache (including refresh tokens) in our encrypted file
+   */
+  private createCachePlugin(): ICachePlugin {
+    return {
+      beforeCacheAccess: async (cacheContext: TokenCacheContext): Promise<void> => {
+        try {
+          if (fs.existsSync(this.tokenCachePath)) {
+            const fileContent = fs.readFileSync(this.tokenCachePath, 'utf-8');
+
+            let decryptedData: string;
+            try {
+              // Try to decrypt first (new encrypted format)
+              decryptedData = this.decryptTokenCache(fileContent);
+            } catch {
+              // Fall back to unencrypted format (for backward compatibility)
+              console.error('[AUTH] Token cache not encrypted, will re-encrypt on next save');
+              decryptedData = fileContent;
+            }
+
+            // Parse JSON
+            const cache: TokenCache = JSON.parse(decryptedData);
+
+            // Load MSAL cache if available (version 2+)
+            if (cache.version >= 2 && cache.msalCache) {
+              cacheContext.tokenCache.deserialize(cache.msalCache);
+              console.error('[AUTH] Loaded MSAL cache from persistent storage');
+            }
+          }
+        } catch (error) {
+          console.error('[AUTH] Failed to load MSAL cache:', error);
+          // Don't throw - allow MSAL to continue with empty cache
+        }
+      },
+
+      afterCacheAccess: async (cacheContext: TokenCacheContext): Promise<void> => {
+        if (cacheContext.cacheHasChanged) {
+          try {
+            // Serialize the entire MSAL cache (includes refresh tokens, accounts, etc.)
+            const msalCacheData = cacheContext.tokenCache.serialize();
+
+            // Create enhanced cache structure
+            const cache: TokenCache = {
+              version: 2,
+              msalCache: msalCacheData,
+              lastUpdated: Date.now(),
+            };
+
+            // Encrypt and save
+            const plaintext = JSON.stringify(cache, null, 2);
+            const encrypted = this.encryptTokenCache(plaintext);
+
+            // Write to temporary file with restrictive permissions first
+            const tempPath = this.tokenCachePath + '.tmp';
+
+            // Write encrypted data with restrictive permissions (0600 = read/write for owner only)
+            fs.writeFileSync(tempPath, encrypted, { mode: 0o600 });
+
+            // Atomically rename to final location
+            fs.renameSync(tempPath, this.tokenCachePath);
+
+            // Verify permissions on the final file
+            try {
+              const stats = fs.statSync(this.tokenCachePath);
+              const permissions = stats.mode & 0o777;
+              if (permissions !== 0o600) {
+                console.error(`[AUTH] WARNING: Token cache file has insecure permissions (${permissions.toString(8)}). Expected 0600.`);
+                // Try to fix permissions
+                fs.chmodSync(this.tokenCachePath, 0o600);
+              }
+            } catch (permError) {
+              console.error('[AUTH] Failed to verify/fix token cache permissions:', permError);
+            }
+
+            console.error(`[AUTH] Saved MSAL cache to persistent storage (includes refresh tokens)`);
+          } catch (error) {
+            console.error('[AUTH] Failed to save MSAL cache:', error);
+          }
+        }
+      },
+    };
   }
 
   /**
@@ -147,7 +271,21 @@ export class GraphAuthProvider {
       return false;
     }
 
-    // Validate required fields
+    // Validate version field
+    if (typeof data.version !== 'number' || data.version < 1) {
+      return false;
+    }
+
+    // Version 2+ uses MSAL cache
+    if (data.version >= 2) {
+      // For version 2+, we just need the MSAL cache data
+      if (data.msalCache && typeof data.msalCache !== 'string') {
+        return false;
+      }
+      return true;
+    }
+
+    // Legacy version 1 validation (backward compatibility)
     if (typeof data.accessToken !== 'string' || data.accessToken.length === 0) {
       return false;
     }
@@ -171,6 +309,8 @@ export class GraphAuthProvider {
 
   /**
    * Load cached tokens from file
+   * For version 2+ caches, MSAL cache plugin handles loading
+   * This method is mainly for legacy cache migration
    */
   private loadCachedTokens(): void {
     try {
@@ -204,11 +344,18 @@ export class GraphAuthProvider {
 
         const cache: TokenCache = rawData;
 
-        if (cache.expiresOn > Date.now()) {
-          this.accessToken = cache.accessToken;
+        // Version 2+ uses MSAL cache plugin (loaded automatically)
+        if (cache.version >= 2) {
+          console.error('[AUTH] Token cache version 2+ detected - MSAL cache plugin will handle loading');
+          return;
+        }
+
+        // Legacy version 1 cache - manually load access token
+        if (cache.expiresOn && cache.expiresOn > Date.now()) {
+          this.accessToken = cache.accessToken || null;
           this.tokenExpiry = new Date(cache.expiresOn);
           this.userAccount = cache.account;
-          console.error('[AUTH] Loaded cached access token');
+          console.error('[AUTH] Loaded cached access token (legacy format)');
         } else {
           console.error('[AUTH] Cached token expired, will re-authenticate');
         }
@@ -223,50 +370,6 @@ export class GraphAuthProvider {
       } catch {
         // Ignore deletion errors
       }
-    }
-  }
-
-  /**
-   * Save tokens to cache (encrypted)
-   */
-  private saveCachedTokens(accessToken: string, expiresOn: Date, account?: any): void {
-    try {
-      const cache: TokenCache = {
-        accessToken,
-        expiresOn: expiresOn.getTime(),
-        userId: this.config.userPrincipalName || this.config.userId,
-        account,
-      };
-
-      // Encrypt the token cache (OWASP A02: Cryptographic Failures)
-      const plaintext = JSON.stringify(cache, null, 2);
-      const encrypted = this.encryptTokenCache(plaintext);
-
-      // Write to temporary file with restrictive permissions first
-      const tempPath = this.tokenCachePath + '.tmp';
-
-      // Write encrypted data with restrictive permissions (0600 = read/write for owner only)
-      fs.writeFileSync(tempPath, encrypted, { mode: 0o600 });
-
-      // Atomically rename to final location
-      fs.renameSync(tempPath, this.tokenCachePath);
-
-      // Verify permissions on the final file
-      try {
-        const stats = fs.statSync(this.tokenCachePath);
-        const permissions = stats.mode & 0o777;
-        if (permissions !== 0o600) {
-          console.error(`[AUTH] WARNING: Token cache file has insecure permissions (${permissions.toString(8)}). Expected 0600.`);
-          // Try to fix permissions
-          fs.chmodSync(this.tokenCachePath, 0o600);
-        }
-      } catch (permError) {
-        console.error('[AUTH] Failed to verify/fix token cache permissions:', permError);
-      }
-
-      console.error(`[AUTH] Saved encrypted tokens to cache: ${this.tokenCachePath}`);
-    } catch (error) {
-      console.error(`[AUTH] Failed to save tokens to cache (${this.tokenCachePath}):`, error);
     }
   }
 
@@ -290,10 +393,14 @@ export class GraphAuthProvider {
       ],
       deviceCodeCallback: (response) => {
         console.error('\n=======================================================================');
-        console.error('AUTHENTICATION REQUIRED');
+        console.error('🔐 AUTHENTICATION REQUIRED');
         console.error('=======================================================================');
-        console.error(`\nTo sign in, use a web browser to open the page:\n  ${response.verificationUri}`);
+        console.error(`\nYour refresh token has expired or is invalid.`);
+        console.error(`Please sign in to continue using the Office 365 MCP connector.\n`);
+        console.error(`To sign in, use a web browser to open the page:\n  ${response.verificationUri}`);
         console.error(`\nAnd enter the code: ${response.userCode}`);
+        console.error(`\nAfter signing in, your session will remain valid for approximately 90 days`);
+        console.error(`(or up to 6 months depending on your organization's token policies).`);
         console.error('\n=======================================================================\n');
       },
     };
@@ -302,45 +409,64 @@ export class GraphAuthProvider {
       const response = await (this.msalClient as PublicClientApplication).acquireTokenByDeviceCode(deviceCodeRequest);
 
       if (!response || !response.accessToken) {
-        throw new Error('Failed to acquire access token via device code flow');
+        const errorMsg = 'Failed to acquire access token via device code flow';
+        throw new AuthenticationError(
+          errorMsg,
+          '❌ Authentication failed. Please try again or contact your administrator if the problem persists.',
+          true
+        );
       }
 
       this.accessToken = response.accessToken;
       this.tokenExpiry = new Date(response.expiresOn!.getTime() - 5 * 60 * 1000); // 5 min buffer
       this.userAccount = response.account;
 
-      // Save tokens to cache
-      this.saveCachedTokens(this.accessToken, this.tokenExpiry, this.userAccount);
+      console.error('✅ Authentication successful! Your session has been saved and will remain valid.');
+      console.error(`   Token cache: ${this.tokenCachePath}`);
 
       return this.accessToken;
     } catch (error) {
-      throw new Error(`Device code authentication failed: ${error instanceof Error ? error.message : String(error)}`);
+      if (error instanceof AuthenticationError) {
+        throw error;
+      }
+
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new AuthenticationError(
+        `Device code authentication failed: ${errorMessage}`,
+        `❌ Authentication failed: ${errorMessage}\n\nPlease try again or contact your administrator if the problem persists.`,
+        true
+      );
     }
   }
 
   /**
-   * Acquire token silently using MSAL cache
+   * Acquire token silently using MSAL cache and refresh tokens
+   * This method attempts to refresh the access token without user interaction
    */
   private async acquireTokenSilent(): Promise<string> {
-    // Get all accounts from MSAL cache
-    const accounts = await (this.msalClient as PublicClientApplication).getTokenCache().getAllAccounts();
-
-    if (accounts.length === 0) {
-      // No accounts in cache, need to authenticate
-      return this.acquireTokenByDeviceCode();
-    }
-
-    // Use the first account (or the cached account if available)
-    const account = this.userAccount || accounts[0];
-
     try {
+      // Get all accounts from MSAL cache
+      const accounts = await (this.msalClient as PublicClientApplication).getTokenCache().getAllAccounts();
+
+      if (accounts.length === 0) {
+        console.error('[AUTH] No cached accounts found - authentication required');
+        // No accounts in cache, need to authenticate
+        return this.acquireTokenByDeviceCode();
+      }
+
+      // Use the first account (or the cached account if available)
+      const account = this.userAccount || accounts[0];
+
+      console.error(`[AUTH] Attempting silent token refresh for account: ${account.username}`);
+
       const response = await (this.msalClient as PublicClientApplication).acquireTokenSilent({
         account,
         scopes: ['https://graph.microsoft.com/.default'],
+        forceRefresh: false, // Use cached token if valid, otherwise use refresh token
       });
 
       if (!response || !response.accessToken) {
-        // Silent acquisition failed, need to re-authenticate
+        console.error('[AUTH] Silent token acquisition returned empty response');
         return this.acquireTokenByDeviceCode();
       }
 
@@ -348,47 +474,96 @@ export class GraphAuthProvider {
       this.tokenExpiry = new Date(response.expiresOn!.getTime() - 5 * 60 * 1000);
       this.userAccount = response.account;
 
-      this.saveCachedTokens(this.accessToken, this.tokenExpiry, this.userAccount);
+      console.error('[AUTH] ✅ Token refreshed successfully using cached credentials');
 
       return this.accessToken;
     } catch (error) {
-      console.error('Silent token acquisition failed, re-authenticating:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      // Check if this is a refresh token expiry error
+      if (errorMessage.includes('AADSTS700082') ||
+          errorMessage.includes('refresh_token') ||
+          errorMessage.includes('interaction_required') ||
+          errorMessage.includes('invalid_grant')) {
+        console.error('[AUTH] ⚠️  Refresh token expired or invalid - user authentication required');
+        console.error(`[AUTH] Error details: ${errorMessage}`);
+      } else {
+        console.error(`[AUTH] Silent token acquisition failed: ${errorMessage}`);
+      }
+
+      // Fall back to device code authentication
       return this.acquireTokenByDeviceCode();
     }
   }
 
   /**
    * Get an access token for Microsoft Graph API
+   * This is the main entry point for obtaining tokens
    */
   async getAccessToken(): Promise<string> {
-    // Return cached token if still valid
-    if (this.accessToken && this.tokenExpiry && this.tokenExpiry > new Date()) {
-      return this.accessToken;
-    }
-
-    const authMode = this.config.authMode || 'app-only';
-
-    if (authMode === 'delegated') {
-      // Try silent acquisition first, which uses MSAL's token cache and refresh tokens
-      return this.acquireTokenSilent();
-    } else {
-      // App-only authentication (client credentials flow)
-      try {
-        const authResult = await (this.msalClient as ConfidentialClientApplication).acquireTokenByClientCredential({
-          scopes: ['https://graph.microsoft.com/.default'],
-        });
-
-        if (!authResult || !authResult.accessToken) {
-          throw new Error('Failed to acquire access token');
-        }
-
-        this.accessToken = authResult.accessToken;
-        this.tokenExpiry = new Date(authResult.expiresOn!.getTime() - 5 * 60 * 1000);
-
+    try {
+      // Return cached token if still valid (with at least 5 minutes remaining)
+      if (this.accessToken && this.tokenExpiry && this.tokenExpiry > new Date()) {
+        const minutesRemaining = Math.floor((this.tokenExpiry.getTime() - Date.now()) / (1000 * 60));
+        console.error(`[AUTH] Using cached access token (expires in ${minutesRemaining} minutes)`);
         return this.accessToken;
-      } catch (error) {
-        throw new Error(`Authentication failed: ${error instanceof Error ? error.message : String(error)}`);
       }
+
+      const authMode = this.config.authMode || 'app-only';
+
+      if (authMode === 'delegated') {
+        // Try silent acquisition first, which uses MSAL's token cache and refresh tokens
+        // This will automatically fall back to device code flow if refresh token is expired
+        return this.acquireTokenSilent();
+      } else {
+        // App-only authentication (client credentials flow)
+        try {
+          const authResult = await (this.msalClient as ConfidentialClientApplication).acquireTokenByClientCredential({
+            scopes: ['https://graph.microsoft.com/.default'],
+          });
+
+          if (!authResult || !authResult.accessToken) {
+            throw new AuthenticationError(
+              'Failed to acquire access token',
+              '❌ Authentication failed: Unable to acquire access token.\n\nPlease verify your CLIENT_SECRET is correct and your app has the required permissions.',
+              false
+            );
+          }
+
+          this.accessToken = authResult.accessToken;
+          this.tokenExpiry = new Date(authResult.expiresOn!.getTime() - 5 * 60 * 1000);
+
+          return this.accessToken;
+        } catch (error) {
+          if (error instanceof AuthenticationError) {
+            throw error;
+          }
+
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          throw new AuthenticationError(
+            `App-only authentication failed: ${errorMessage}`,
+            `❌ Authentication failed: ${errorMessage}\n\nPlease verify:\n- CLIENT_ID is correct\n- CLIENT_SECRET is valid\n- TENANT_ID is correct\n- Your app has the required API permissions`,
+            false
+          );
+        }
+      }
+    } catch (error) {
+      // Re-throw AuthenticationError as-is so the user-friendly message is preserved
+      if (error instanceof AuthenticationError) {
+        // Log the user-friendly message to stderr so users see it
+        console.error('\n' + error.userMessage + '\n');
+        throw error;
+      }
+
+      // Wrap other errors
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const authError = new AuthenticationError(
+        `Authentication failed: ${errorMessage}`,
+        `❌ Authentication failed: ${errorMessage}`,
+        false
+      );
+      console.error('\n' + authError.userMessage + '\n');
+      throw authError;
     }
   }
 
