@@ -197,6 +197,25 @@ const TOOLS: Tool[] = [
       required: ['eventId'],
     },
   },
+  {
+    name: 'calendar_update_event',
+    description: 'Update a calendar event - modify subject, time, location, attendees, etc.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        eventId: { type: 'string', description: 'The event ID to update' },
+        subject: { type: 'string', description: 'Updated event subject/title' },
+        startDateTime: { type: 'string', description: 'Updated start date/time (ISO 8601 format)' },
+        endDateTime: { type: 'string', description: 'Updated end date/time (ISO 8601 format)' },
+        timeZone: { type: 'string', description: 'Time zone (default: UTC)' },
+        location: { type: 'string', description: 'Updated event location' },
+        body: { type: 'string', description: 'Updated event description' },
+        attendees: { type: 'array', items: { type: 'string' }, description: 'Updated array of attendee email addresses' },
+        isOnlineMeeting: { type: 'boolean', description: 'Update online meeting status' },
+      },
+      required: ['eventId'],
+    },
+  },
 
   // OneDrive Tools
   {
@@ -732,6 +751,30 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         await calendar.deleteEvent((args as any).eventId);
         result = { success: true, message: 'Event deleted successfully' };
         break;
+      case 'calendar_update_event': {
+        const { eventId, subject, startDateTime, endDateTime, timeZone, location, body: eventBody, attendees, isOnlineMeeting } = args as any;
+
+        // Build the updates object with only provided fields
+        const updates: any = {};
+
+        if (subject !== undefined) updates.subject = subject;
+        if (startDateTime !== undefined || endDateTime !== undefined || timeZone !== undefined) {
+          if (startDateTime) updates.start = { dateTime: startDateTime, timeZone: timeZone || 'UTC' };
+          if (endDateTime) updates.end = { dateTime: endDateTime, timeZone: timeZone || 'UTC' };
+        }
+        if (location !== undefined) updates.location = { displayName: location };
+        if (eventBody !== undefined) updates.body = { contentType: 'Text', content: eventBody };
+        if (attendees !== undefined) {
+          updates.attendees = attendees.map((email: string) => ({
+            emailAddress: { address: email },
+            type: 'required' as const
+          }));
+        }
+        if (isOnlineMeeting !== undefined) updates.isOnlineMeeting = isOnlineMeeting;
+
+        result = await calendar.updateEvent(eventId, updates);
+        break;
+      }
 
       // OneDrive Tools
       case 'onedrive_list_items':
