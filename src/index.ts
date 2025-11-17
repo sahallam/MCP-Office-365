@@ -71,9 +71,7 @@ const config: GraphConfig = {
 };
 
 // Log authentication mode
-console.error(`Office365 MCP Server starting with ${authMode} authentication...`);
-
-// Initialize auth provider
+// Initialize auth provider silently
 const authProvider = new GraphAuthProvider(config);
 
 // Define all available tools
@@ -773,7 +771,6 @@ const server = new Server(
 
 // Handle tool list request
 server.setRequestHandler(ListToolsRequestSchema, async () => {
-  console.error(`[MCP] Returning ${TOOLS.length} tools to client`);
   return { tools: TOOLS };
 });
 
@@ -785,8 +782,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     // Get authenticated Graph client
     const graphClient = await authProvider.getGraphClient();
     const userId = authProvider.getUserId();
-
-    console.error(`[MCP] Tool called: ${name}, userId: ${userId}`);
 
     // Initialize tool classes
     const outlook = new OutlookTools(graphClient, userId);
@@ -1152,10 +1147,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
 // Start the server
 async function main() {
-  console.error(`[MCP] Server handlers registered, ${TOOLS.length} tools defined`);
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error('[MCP] Office365 MCP Server running on stdio');
 }
 
 main().catch((error) => {
