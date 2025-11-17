@@ -127,11 +127,17 @@ export class GraphAuthProvider {
             // Parse JSON
             const cache: TokenCache = JSON.parse(decryptedData);
 
+            console.error(`[AUTH] Cache version detected: ${cache.version || 'legacy'}`);
+
             // Load MSAL cache if available (version 2+)
-            if (cache.version >= 2 && cache.msalCache) {
+            if (cache.version !== undefined && cache.version >= 2 && cache.msalCache) {
               cacheContext.tokenCache.deserialize(cache.msalCache);
-              console.error('[AUTH] Loaded MSAL cache from persistent storage');
+              console.error('[AUTH] ✅ Loaded MSAL cache from persistent storage (includes refresh tokens)');
+            } else {
+              console.error('[AUTH] ⚠️  Cache is legacy format (no MSAL data) - will upgrade on next authentication');
             }
+          } else {
+            console.error('[AUTH] No cache file found at: ' + this.tokenCachePath);
           }
         } catch (error) {
           console.error('[AUTH] Failed to load MSAL cache:', error);
@@ -144,6 +150,8 @@ export class GraphAuthProvider {
           try {
             // Serialize the entire MSAL cache (includes refresh tokens, accounts, etc.)
             const msalCacheData = cacheContext.tokenCache.serialize();
+
+            console.error('[AUTH] 💾 Saving MSAL cache (cache has changed)...');
 
             // Create enhanced cache structure
             const cache: TokenCache = {
@@ -178,10 +186,12 @@ export class GraphAuthProvider {
               console.error('[AUTH] Failed to verify/fix token cache permissions:', permError);
             }
 
-            console.error(`[AUTH] Saved MSAL cache to persistent storage (includes refresh tokens)`);
+            console.error(`[AUTH] ✅ Saved MSAL cache to persistent storage: ${this.tokenCachePath}`);
           } catch (error) {
-            console.error('[AUTH] Failed to save MSAL cache:', error);
+            console.error('[AUTH] ❌ Failed to save MSAL cache:', error);
           }
+        } else {
+          console.error('[AUTH] Cache access but no changes detected - not saving');
         }
       },
     };
