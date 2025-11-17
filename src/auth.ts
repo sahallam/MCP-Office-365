@@ -74,6 +74,7 @@ export class GraphAuthProvider {
   private tokenCachePath: string;
   private userAccount: any = null;
   private pendingDeviceCode: { userCode: string; verificationUri: string; expiresIn: number } | null = null;
+  private authenticationInProgress: boolean = false;
 
   constructor(config: GraphConfig) {
     this.config = config;
@@ -432,8 +433,20 @@ export class GraphAuthProvider {
 
   /**
    * Acquire token using device code flow (for delegated auth)
+   * This method is non-blocking - it starts the auth flow in the background
+   * and immediately throws an error with the device code for the user
    */
   private async acquireTokenByDeviceCode(): Promise<string> {
+    // If authentication is already in progress, throw error with existing code
+    if (this.authenticationInProgress && this.pendingDeviceCode) {
+      throw new AuthenticationError(
+        'Authentication in progress',
+        'Please complete the authentication using the code provided.',
+        true,
+        this.pendingDeviceCode
+      );
+    }
+
     const deviceCodeRequest: DeviceCodeRequest = {
       scopes: [
         'User.Read',
@@ -449,7 +462,7 @@ export class GraphAuthProvider {
         'Chat.ReadWrite',
       ],
       deviceCodeCallback: (response) => {
-        // Store device code info for potential error reporting
+        // Store device code info for immediate error reporting
         this.pendingDeviceCode = {
           userCode: response.userCode,
           verificationUri: response.verificationUri,
@@ -466,51 +479,54 @@ export class GraphAuthProvider {
         console.error(`\nAfter signing in, your session will remain valid for approximately 90 days`);
         console.error(`(or up to 6 months depending on your organization's token policies).`);
         console.error('\n=======================================================================\n');
+
+        // Immediately throw error with device code (non-blocking)
+        // The actual authentication will continue in the background
       },
     };
 
-    try {
-      const response = await (this.msalClient as PublicClientApplication).acquireTokenByDeviceCode(deviceCodeRequest);
+    // Mark authentication as in progress
+    this.authenticationInProgress = true;
 
-      if (!response || !response.accessToken) {
-        const errorMsg = 'Failed to acquire access token via device code flow';
-        throw new AuthenticationError(
-          errorMsg,
-          '❌ Authentication failed. Please try again or contact your administrator if the problem persists.',
-          true
-        );
-      }
+    // Start authentication in background (don't await)
+    (this.msalClient as PublicClientApplication).acquireTokenByDeviceCode(deviceCodeRequest)
+      .then((response) => {
+        if (response && response.accessToken) {
+          this.accessToken = response.accessToken;
+          this.tokenExpiry = new Date(response.expiresOn!.getTime() - 5 * 60 * 1000);
+          this.userAccount = response.account;
 
-      this.accessToken = response.accessToken;
-      this.tokenExpiry = new Date(response.expiresOn!.getTime() - 5 * 60 * 1000); // 5 min buffer
-      this.userAccount = response.account;
+          console.error('✅ Authentication successful! Your session has been saved and will remain valid.');
+          console.error(`   Token cache: ${this.tokenCachePath}`);
 
-      // Clear pending device code after successful auth
-      this.pendingDeviceCode = null;
+          // Clear pending device code after successful auth
+          this.pendingDeviceCode = null;
+          this.authenticationInProgress = false;
+        }
+      })
+      .catch((error) => {
+        console.error('[AUTH] Background authentication failed:', error);
+        this.pendingDeviceCode = null;
+        this.authenticationInProgress = false;
+      });
 
-      console.error('✅ Authentication successful! Your session has been saved and will remain valid.');
-      console.error(`   Token cache: ${this.tokenCachePath}`);
+    // Wait a moment for the device code to be generated
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
-      return this.accessToken;
-    } catch (error) {
-      if (error instanceof AuthenticationError) {
-        throw error;
-      }
-
-      const errorMessage = error instanceof Error ? error.message : String(error);
-
-      // Include device code info if available
-      const authError = new AuthenticationError(
-        `Device code authentication failed: ${errorMessage}`,
-        `❌ Authentication failed: ${errorMessage}\n\nPlease try again or contact your administrator if the problem persists.`,
+    // Throw error with device code immediately (don't wait for user to authenticate)
+    if (this.pendingDeviceCode) {
+      throw new AuthenticationError(
+        'Authentication required - device code generated',
+        'Please authenticate using the device code provided below.',
         true,
-        this.pendingDeviceCode || undefined
+        this.pendingDeviceCode
       );
-
-      // Clear pending device code after error
-      this.pendingDeviceCode = null;
-
-      throw authError;
+    } else {
+      throw new AuthenticationError(
+        'Authentication required',
+        'Please check the server logs for authentication instructions.',
+        true
+      );
     }
   }
 
