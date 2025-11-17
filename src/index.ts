@@ -15,7 +15,7 @@ import {
   Tool,
 } from '@modelcontextprotocol/sdk/types.js';
 import * as dotenv from 'dotenv';
-import { GraphAuthProvider } from './auth.js';
+import { GraphAuthProvider, AuthenticationError } from './auth.js';
 import { OutlookTools } from './tools/outlook.js';
 import { CalendarTools } from './tools/calendar.js';
 import { OneDriveTools } from './tools/onedrive.js';
@@ -78,6 +78,16 @@ const authProvider = new GraphAuthProvider(config);
 
 // Define all available tools
 const TOOLS: Tool[] = [
+  // Authentication Tool
+  {
+    name: 'auth_status',
+    description: 'Check authentication status and get instructions if re-authentication is needed',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+
   // Outlook/Email Tools
   {
     name: 'outlook_list_emails',
@@ -790,6 +800,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     let result: any;
 
     switch (name) {
+      // Authentication Tool
+      case 'auth_status': {
+        const isAuthenticated = authProvider.isAuthenticated();
+        result = {
+          authenticated: isAuthenticated,
+          status: isAuthenticated ? 'active' : 'authentication_required',
+          message: isAuthenticated
+            ? 'Authentication is active and working properly.'
+            : 'Authentication required. Please check the server logs for authentication instructions.',
+          authMode: config.authMode,
+        };
+        break;
+      }
+
       // Outlook/Email Tools
       case 'outlook_list_emails':
         result = await outlook.listEmails(args as any);
@@ -1072,7 +1096,23 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       `Args: ${JSON.stringify(args).substring(0, 100)}`
     );
 
-    // Return sanitized error message to user
+    // Check if this is an authentication error
+    if (error instanceof AuthenticationError) {
+      // Return user-friendly authentication error message
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `🔐 AUTHENTICATION REQUIRED\n\n${error.userMessage}\n\n${error.requiresReauth
+              ? 'Your session has expired. Please check the Office 365 MCP server logs for authentication instructions.\n\nThe server logs will display a device code and URL for signing in.\n\nOnce authenticated, your session will remain valid for approximately 90 days (or longer depending on your organization\'s policies).'
+              : 'Please check the Office 365 MCP server logs for detailed error information and authentication instructions.'}`,
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    // Return sanitized error message for other errors
     const userMessage = error instanceof Error
       ? getPublicErrorMessage(error)
       : 'An unexpected error occurred';
