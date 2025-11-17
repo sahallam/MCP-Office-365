@@ -1098,14 +1098,34 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     // Check if this is an authentication error
     if (error instanceof AuthenticationError) {
+      // Build authentication error message
+      let authMessage = `🔐 AUTHENTICATION REQUIRED\n\n${error.userMessage}\n\n`;
+
+      // Include device code information if available
+      if (error.deviceCode && error.verificationUri) {
+        const expiresInMinutes = error.expiresIn ? Math.floor(error.expiresIn / 60) : 15;
+        authMessage += `Please sign in using your web browser:\n\n`;
+        authMessage += `1. Open this URL: ${error.verificationUri}\n`;
+        authMessage += `2. Enter this code: ${error.deviceCode}\n`;
+        authMessage += `3. Sign in with your Microsoft account\n\n`;
+        authMessage += `⏱️  Code expires in ${expiresInMinutes} minutes\n\n`;
+        authMessage += `Once authenticated, your session will remain valid for approximately 90 days\n`;
+        authMessage += `(or longer depending on your organization's token policies).`;
+      } else if (error.requiresReauth) {
+        authMessage += 'Your session has expired. Please check the Office 365 MCP server logs for authentication instructions.\n\n';
+        authMessage += 'The server logs will display a device code and URL for signing in.\n\n';
+        authMessage += 'Once authenticated, your session will remain valid for approximately 90 days\n';
+        authMessage += '(or longer depending on your organization\'s policies).';
+      } else {
+        authMessage += 'Please check the Office 365 MCP server logs for detailed error information and authentication instructions.';
+      }
+
       // Return user-friendly authentication error message
       return {
         content: [
           {
             type: 'text',
-            text: `🔐 AUTHENTICATION REQUIRED\n\n${error.userMessage}\n\n${error.requiresReauth
-              ? 'Your session has expired. Please check the Office 365 MCP server logs for authentication instructions.\n\nThe server logs will display a device code and URL for signing in.\n\nOnce authenticated, your session will remain valid for approximately 90 days (or longer depending on your organization\'s policies).'
-              : 'Please check the Office 365 MCP server logs for detailed error information and authentication instructions.'}`,
+            text: authMessage,
           },
         ],
         isError: true,

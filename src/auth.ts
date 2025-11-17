@@ -43,12 +43,26 @@ interface TokenCache {
 export class AuthenticationError extends Error {
   public readonly userMessage: string;
   public readonly requiresReauth: boolean;
+  public readonly deviceCode?: string;
+  public readonly verificationUri?: string;
+  public readonly expiresIn?: number;
 
-  constructor(message: string, userMessage: string, requiresReauth: boolean = false) {
+  constructor(
+    message: string,
+    userMessage: string,
+    requiresReauth: boolean = false,
+    deviceCodeInfo?: { userCode: string; verificationUri: string; expiresIn: number }
+  ) {
     super(message);
     this.name = 'AuthenticationError';
     this.userMessage = userMessage;
     this.requiresReauth = requiresReauth;
+
+    if (deviceCodeInfo) {
+      this.deviceCode = deviceCodeInfo.userCode;
+      this.verificationUri = deviceCodeInfo.verificationUri;
+      this.expiresIn = deviceCodeInfo.expiresIn;
+    }
   }
 }
 
@@ -59,6 +73,7 @@ export class GraphAuthProvider {
   private tokenExpiry: Date | null = null;
   private tokenCachePath: string;
   private userAccount: any = null;
+  private pendingDeviceCode: { userCode: string; verificationUri: string; expiresIn: number } | null = null;
 
   constructor(config: GraphConfig) {
     this.config = config;
@@ -434,6 +449,13 @@ export class GraphAuthProvider {
         'Chat.ReadWrite',
       ],
       deviceCodeCallback: (response) => {
+        // Store device code info for potential error reporting
+        this.pendingDeviceCode = {
+          userCode: response.userCode,
+          verificationUri: response.verificationUri,
+          expiresIn: response.expiresIn,
+        };
+
         console.error('\n=======================================================================');
         console.error('🔐 AUTHENTICATION REQUIRED');
         console.error('=======================================================================');
@@ -463,6 +485,9 @@ export class GraphAuthProvider {
       this.tokenExpiry = new Date(response.expiresOn!.getTime() - 5 * 60 * 1000); // 5 min buffer
       this.userAccount = response.account;
 
+      // Clear pending device code after successful auth
+      this.pendingDeviceCode = null;
+
       console.error('✅ Authentication successful! Your session has been saved and will remain valid.');
       console.error(`   Token cache: ${this.tokenCachePath}`);
 
@@ -473,11 +498,19 @@ export class GraphAuthProvider {
       }
 
       const errorMessage = error instanceof Error ? error.message : String(error);
-      throw new AuthenticationError(
+
+      // Include device code info if available
+      const authError = new AuthenticationError(
         `Device code authentication failed: ${errorMessage}`,
         `❌ Authentication failed: ${errorMessage}\n\nPlease try again or contact your administrator if the problem persists.`,
-        true
+        true,
+        this.pendingDeviceCode || undefined
       );
+
+      // Clear pending device code after error
+      this.pendingDeviceCode = null;
+
+      throw authError;
     }
   }
 
