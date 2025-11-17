@@ -437,8 +437,11 @@ export class GraphAuthProvider {
    * and immediately throws an error with the device code for the user
    */
   private async acquireTokenByDeviceCode(): Promise<string> {
+    console.error('[AUTH] acquireTokenByDeviceCode called');
+
     // If authentication is already in progress, throw error with existing code
     if (this.authenticationInProgress && this.pendingDeviceCode) {
+      console.error('[AUTH] Auth already in progress, returning existing device code');
       throw new AuthenticationError(
         'Authentication in progress',
         'Please complete the authentication using the code provided.',
@@ -446,6 +449,15 @@ export class GraphAuthProvider {
         this.pendingDeviceCode
       );
     }
+
+    // Mark authentication as in progress
+    this.authenticationInProgress = true;
+
+    // Create a promise that resolves when device code callback fires
+    let deviceCodeResolve: (value: any) => void;
+    const deviceCodePromise = new Promise((resolve) => {
+      deviceCodeResolve = resolve;
+    });
 
     const deviceCodeRequest: DeviceCodeRequest = {
       scopes: [
@@ -462,6 +474,8 @@ export class GraphAuthProvider {
         'Chat.ReadWrite',
       ],
       deviceCodeCallback: (response) => {
+        console.error('[AUTH] Device code callback fired!');
+
         // Store device code info for immediate error reporting
         this.pendingDeviceCode = {
           userCode: response.userCode,
@@ -480,17 +494,17 @@ export class GraphAuthProvider {
         console.error(`(or up to 6 months depending on your organization's token policies).`);
         console.error('\n=======================================================================\n');
 
-        // Immediately throw error with device code (non-blocking)
-        // The actual authentication will continue in the background
+        // Resolve the promise so we can throw the error
+        deviceCodeResolve(response);
       },
     };
 
-    // Mark authentication as in progress
-    this.authenticationInProgress = true;
+    console.error('[AUTH] Starting device code acquisition in background');
 
     // Start authentication in background (don't await)
     (this.msalClient as PublicClientApplication).acquireTokenByDeviceCode(deviceCodeRequest)
       .then((response) => {
+        console.error('[AUTH] Background authentication completed successfully');
         if (response && response.accessToken) {
           this.accessToken = response.accessToken;
           this.tokenExpiry = new Date(response.expiresOn!.getTime() - 5 * 60 * 1000);
@@ -510,11 +524,22 @@ export class GraphAuthProvider {
         this.authenticationInProgress = false;
       });
 
-    // Wait a moment for the device code to be generated
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Wait for device code callback to fire (with timeout)
+    console.error('[AUTH] Waiting for device code callback...');
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Device code generation timeout')), 3000)
+    );
+
+    try {
+      await Promise.race([deviceCodePromise, timeoutPromise]);
+      console.error('[AUTH] Device code received, throwing authentication error');
+    } catch (error) {
+      console.error('[AUTH] Timeout waiting for device code:', error);
+    }
 
     // Throw error with device code immediately (don't wait for user to authenticate)
     if (this.pendingDeviceCode) {
+      console.error('[AUTH] Throwing AuthenticationError with device code:', this.pendingDeviceCode.userCode);
       throw new AuthenticationError(
         'Authentication required - device code generated',
         'Please authenticate using the device code provided below.',
@@ -522,6 +547,7 @@ export class GraphAuthProvider {
         this.pendingDeviceCode
       );
     } else {
+      console.error('[AUTH] No device code available, throwing generic auth error');
       throw new AuthenticationError(
         'Authentication required',
         'Please check the server logs for authentication instructions.',
