@@ -197,6 +197,115 @@ const TOOLS: Tool[] = [
       required: ['eventId'],
     },
   },
+  {
+    name: 'calendar_update_event',
+    description: 'Update a calendar event - modify subject, time, location, attendees, etc.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        eventId: { type: 'string', description: 'The event ID to update' },
+        subject: { type: 'string', description: 'Updated event subject/title' },
+        startDateTime: { type: 'string', description: 'Updated start date/time (ISO 8601 format)' },
+        endDateTime: { type: 'string', description: 'Updated end date/time (ISO 8601 format)' },
+        timeZone: { type: 'string', description: 'Time zone (default: UTC)' },
+        location: { type: 'string', description: 'Updated event location' },
+        body: { type: 'string', description: 'Updated event description' },
+        attendees: { type: 'array', items: { type: 'string' }, description: 'Updated array of attendee email addresses' },
+        isOnlineMeeting: { type: 'boolean', description: 'Update online meeting status' },
+      },
+      required: ['eventId'],
+    },
+  },
+  {
+    name: 'calendar_get_event',
+    description: 'Get a specific calendar event by ID',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        eventId: { type: 'string', description: 'The event ID to retrieve' },
+      },
+      required: ['eventId'],
+    },
+  },
+  {
+    name: 'calendar_accept_meeting',
+    description: 'Accept a meeting invitation',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        eventId: { type: 'string', description: 'The event ID to accept' },
+        comment: { type: 'string', description: 'Optional comment to send with the response' },
+      },
+      required: ['eventId'],
+    },
+  },
+  {
+    name: 'calendar_decline_meeting',
+    description: 'Decline a meeting invitation',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        eventId: { type: 'string', description: 'The event ID to decline' },
+        comment: { type: 'string', description: 'Optional comment to send with the response' },
+      },
+      required: ['eventId'],
+    },
+  },
+  {
+    name: 'calendar_tentatively_accept_meeting',
+    description: 'Tentatively accept a meeting invitation',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        eventId: { type: 'string', description: 'The event ID to tentatively accept' },
+        comment: { type: 'string', description: 'Optional comment to send with the response' },
+      },
+      required: ['eventId'],
+    },
+  },
+  {
+    name: 'calendar_find_meeting_times',
+    description: 'Find available meeting times that work for all attendees',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        attendees: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Array of attendee email addresses'
+        },
+        startDateTime: {
+          type: 'string',
+          description: 'Start of time window to search (ISO 8601 format)'
+        },
+        endDateTime: {
+          type: 'string',
+          description: 'End of time window to search (ISO 8601 format)'
+        },
+        timeZone: {
+          type: 'string',
+          description: 'Time zone for the search (default: UTC)'
+        },
+        meetingDuration: {
+          type: 'string',
+          description: 'Duration in ISO 8601 format (e.g., PT1H for 1 hour, PT30M for 30 minutes)'
+        },
+        maxCandidates: {
+          type: 'number',
+          description: 'Maximum number of time suggestions to return (default: 5)'
+        },
+      },
+      required: ['attendees', 'startDateTime', 'endDateTime', 'meetingDuration'],
+    },
+  },
+  {
+    name: 'calendar_list_calendars',
+    description: 'List all calendars for the user',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
 
   // OneDrive Tools
   {
@@ -732,6 +841,63 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case 'calendar_delete_event':
         await calendar.deleteEvent((args as any).eventId);
         result = { success: true, message: 'Event deleted successfully' };
+        break;
+      case 'calendar_update_event': {
+        const { eventId, subject, startDateTime, endDateTime, timeZone, location, body: eventBody, attendees, isOnlineMeeting } = args as any;
+
+        // Build the updates object with only provided fields
+        const updates: any = {};
+
+        if (subject !== undefined) updates.subject = subject;
+        if (startDateTime !== undefined || endDateTime !== undefined || timeZone !== undefined) {
+          if (startDateTime) updates.start = { dateTime: startDateTime, timeZone: timeZone || 'UTC' };
+          if (endDateTime) updates.end = { dateTime: endDateTime, timeZone: timeZone || 'UTC' };
+        }
+        if (location !== undefined) updates.location = { displayName: location };
+        if (eventBody !== undefined) updates.body = { contentType: 'Text', content: eventBody };
+        if (attendees !== undefined) {
+          updates.attendees = attendees.map((email: string) => ({
+            emailAddress: { address: email },
+            type: 'required' as const
+          }));
+        }
+        if (isOnlineMeeting !== undefined) updates.isOnlineMeeting = isOnlineMeeting;
+
+        result = await calendar.updateEvent(eventId, updates);
+        break;
+      }
+      case 'calendar_get_event':
+        result = await calendar.getEvent((args as any).eventId);
+        break;
+      case 'calendar_accept_meeting':
+        await calendar.acceptMeeting((args as any).eventId, (args as any).comment);
+        result = { success: true, message: 'Meeting accepted successfully' };
+        break;
+      case 'calendar_decline_meeting':
+        await calendar.declineMeeting((args as any).eventId, (args as any).comment);
+        result = { success: true, message: 'Meeting declined successfully' };
+        break;
+      case 'calendar_tentatively_accept_meeting':
+        await calendar.tentativelyAcceptMeeting((args as any).eventId, (args as any).comment);
+        result = { success: true, message: 'Meeting tentatively accepted successfully' };
+        break;
+      case 'calendar_find_meeting_times': {
+        const { attendees, startDateTime, endDateTime, timeZone, meetingDuration, maxCandidates } = args as any;
+        result = await calendar.findMeetingTimes({
+          attendees,
+          timeConstraint: {
+            timeslots: [{
+              start: { dateTime: startDateTime, timeZone: timeZone || 'UTC' },
+              end: { dateTime: endDateTime, timeZone: timeZone || 'UTC' }
+            }]
+          },
+          meetingDuration,
+          maxCandidates,
+        });
+        break;
+      }
+      case 'calendar_list_calendars':
+        result = await calendar.listCalendars();
         break;
 
       // OneDrive Tools
