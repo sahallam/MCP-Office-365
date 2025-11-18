@@ -125,13 +125,17 @@ export class GraphAuthProvider {
     return {
       beforeCacheAccess: async (cacheContext: TokenCacheContext): Promise<void> => {
         try {
+          console.error(`[AUTH-DEBUG] beforeCacheAccess called, checking for cache at: ${this.tokenCachePath}`);
           if (fs.existsSync(this.tokenCachePath)) {
+            console.error('[AUTH-DEBUG] Cache file EXISTS, reading...');
             const fileContent = fs.readFileSync(this.tokenCachePath, 'utf-8');
+            console.error(`[AUTH-DEBUG] Cache file read, length: ${fileContent.length}`);
 
             let decryptedData: string;
             try {
               // Try to decrypt first (new encrypted format)
               decryptedData = this.decryptTokenCache(fileContent);
+              console.error('[AUTH-DEBUG] Cache decrypted successfully');
             } catch {
               // Fall back to unencrypted format (for backward compatibility)
               console.error('[AUTH] Token cache not encrypted, will re-encrypt on next save');
@@ -140,23 +144,31 @@ export class GraphAuthProvider {
 
             // Parse JSON
             const cache: TokenCache = JSON.parse(decryptedData);
+            console.error(`[AUTH-DEBUG] Cache parsed, version: ${cache.version}`);
 
             // Load MSAL cache if available (version 2+)
             if (cache.version !== undefined && cache.version >= 2 && cache.msalCache) {
               cacheContext.tokenCache.deserialize(cache.msalCache);
+              console.error(`[AUTH-DEBUG] ✅ MSAL cache loaded (${cache.msalCache.length} chars)`);
+            } else {
+              console.error('[AUTH-DEBUG] ⚠️  Cache is legacy format or missing MSAL data');
             }
+          } else {
+            console.error('[AUTH-DEBUG] ❌ Cache file does NOT exist');
           }
         } catch (error) {
-          console.error('[AUTH] Failed to load MSAL cache:', error);
+          console.error('[AUTH] ❌ Failed to load MSAL cache:', error);
           // Don't throw - allow MSAL to continue with empty cache
         }
       },
 
       afterCacheAccess: async (cacheContext: TokenCacheContext): Promise<void> => {
+        console.error(`[AUTH-DEBUG] afterCacheAccess called, cacheHasChanged: ${cacheContext.cacheHasChanged}`);
         if (cacheContext.cacheHasChanged) {
           try {
             // Serialize the entire MSAL cache (includes refresh tokens, accounts, etc.)
             const msalCacheData = cacheContext.tokenCache.serialize();
+            console.error(`[AUTH-DEBUG] MSAL cache serialized, length: ${msalCacheData.length}`);
 
             // Create enhanced cache structure
             const cache: TokenCache = {
@@ -177,6 +189,7 @@ export class GraphAuthProvider {
 
             // Atomically rename to final location
             fs.renameSync(tempPath, this.tokenCachePath);
+            console.error(`[AUTH-DEBUG] ✅ Cache saved to: ${this.tokenCachePath}`);
 
             // Verify permissions on the final file
             try {
@@ -191,8 +204,10 @@ export class GraphAuthProvider {
               console.error('[AUTH] Failed to verify/fix token cache permissions:', permError);
             }
           } catch (error) {
-            console.error('[AUTH] Failed to save MSAL cache:', error);
+            console.error('[AUTH] ❌ Failed to save MSAL cache:', error);
           }
+        } else {
+          console.error('[AUTH-DEBUG] Cache has NOT changed, skipping save');
         }
       },
     };
