@@ -326,6 +326,8 @@ export class GraphAuthProvider {
   private loadCachedTokens(): void {
     try {
       if (fs.existsSync(this.tokenCachePath)) {
+        const stats = fs.statSync(this.tokenCachePath);
+        console.error(`[AUTH] Found token cache file (${stats.size} bytes)`);
         const fileContent = fs.readFileSync(this.tokenCachePath, 'utf-8');
 
         let decryptedData: string;
@@ -407,14 +409,8 @@ export class GraphAuthProvider {
       }
     } catch (error) {
       console.error('[AUTH] Failed to load cached tokens:', error);
-      // Delete potentially corrupted cache file
-      try {
-        if (fs.existsSync(this.tokenCachePath)) {
-          fs.unlinkSync(this.tokenCachePath);
-        }
-      } catch {
-        // Ignore deletion errors
-      }
+      // Don't delete the cache file here - let MSAL cache plugin try to load it
+      // The cache plugin has its own error handling and may succeed where this fails
     }
   }
 
