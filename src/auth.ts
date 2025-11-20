@@ -492,21 +492,30 @@ export class GraphAuthProvider {
 
     // Start authentication in background (don't await)
     (this.msalClient as PublicClientApplication).acquireTokenByDeviceCode(deviceCodeRequest)
-      .then((response) => {
+      .then(async (response) => {
+        console.error('[AUTH-DEBUG] Background auth promise resolved');
         if (response && response.accessToken) {
+          console.error('[AUTH-DEBUG] Got access token, length:', response.accessToken.length);
           this.accessToken = response.accessToken;
           this.tokenExpiry = new Date(response.expiresOn!.getTime() - 5 * 60 * 1000);
           this.userAccount = response.account;
+          console.error('[AUTH-DEBUG] Account:', response.account?.username || 'unknown');
+
+          // Check if cache was updated by MSAL
+          const accounts = await (this.msalClient as PublicClientApplication).getTokenCache().getAllAccounts();
+          console.error(`[AUTH-DEBUG] Accounts in cache after auth: ${accounts.length}`);
 
           console.error('✅ Authentication successful! Session saved.');
 
           // Clear pending device code after successful auth
           this.pendingDeviceCode = null;
           this.authenticationInProgress = false;
+        } else {
+          console.error('[AUTH-DEBUG] ❌ No access token in response');
         }
       })
       .catch((error) => {
-        console.error('[AUTH] Authentication failed:', error);
+        console.error('[AUTH-DEBUG] ❌ Background auth promise rejected:', error.message || error);
         this.pendingDeviceCode = null;
         this.authenticationInProgress = false;
       });
