@@ -1147,6 +1147,23 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
 // Start the server
 async function main() {
+  // Handle EPIPE errors gracefully (occurs when client closes connection)
+  process.stdout.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EPIPE') {
+      // Client closed the connection - exit gracefully
+      process.exit(0);
+    }
+    console.error('stdout error:', err);
+  });
+
+  process.stdin.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EPIPE' || err.code === 'ECONNRESET') {
+      // Client closed the connection - exit gracefully
+      process.exit(0);
+    }
+    console.error('stdin error:', err);
+  });
+
   const transport = new StdioServerTransport();
   await server.connect(transport);
 }
