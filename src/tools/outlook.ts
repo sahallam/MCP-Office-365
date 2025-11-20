@@ -6,6 +6,25 @@ import { Client } from '@microsoft/microsoft-graph-client';
 import { EmailMessage } from '../types.js';
 import { sanitizeSearchQuery, validateResourceId, validateContentLength, SIZE_LIMITS } from '../security.js';
 
+/**
+ * Formats email body text by converting plain text line breaks to HTML.
+ * If the text already contains HTML tags, returns it unchanged.
+ * @param text - The email body text to format
+ * @returns Formatted HTML string
+ */
+function formatEmailBody(text: string): string {
+  // If it already contains HTML tags, use as-is
+  if (/<[a-z][\s\S]*>/i.test(text)) {
+    return text;
+  }
+
+  // Convert plain text with line breaks to HTML
+  return text
+    .split('\n')
+    .map(line => line.trim() || '&nbsp;') // Empty lines become non-breaking spaces
+    .join('<br>');
+}
+
 export class OutlookTools {
   constructor(private graphClient: Client, private userId: string) {}
 
@@ -68,12 +87,15 @@ export class OutlookTools {
     validateContentLength(message.subject, SIZE_LIMITS.MAX_EMAIL_SUBJECT_SIZE, 'Email subject');
     validateContentLength(message.body.content, SIZE_LIMITS.MAX_EMAIL_BODY_SIZE, 'Email body');
 
+    // Format the email body (converts plain text line breaks to HTML)
+    const formattedContent = formatEmailBody(message.body.content);
+
     const mailObject = {
       message: {
         subject: message.subject,
         body: {
-          contentType: message.body.contentType,
-          content: message.body.content,
+          contentType: 'HTML',
+          content: formattedContent,
         },
         toRecipients: message.toRecipients,
         ccRecipients: message.ccRecipients || [],
@@ -97,10 +119,13 @@ export class OutlookTools {
 
     const endpoint = replyAll ? 'replyAll' : 'reply';
 
+    // Format the comment (converts plain text line breaks to HTML)
+    const formattedComment = formatEmailBody(comment);
+
     await this.graphClient
       .api(`${this.getUserPath()}/messages/${messageId}/${endpoint}`)
       .post({
-        comment,
+        comment: formattedComment,
       });
   }
 
