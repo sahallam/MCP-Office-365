@@ -385,7 +385,23 @@ export class GraphAuthProvider {
         // Parse JSON
         const rawData = JSON.parse(decryptedData);
 
-        // Validate structure before using (OWASP A08: Software and Data Integrity)
+        // Determine cache version FIRST (default to 1 if not present for legacy caches)
+        const cacheVersion = rawData.version || 1;
+
+        // Version 2+ uses MSAL cache plugin (loaded automatically)
+        // Don't validate with legacy validator - just check basic structure
+        if (cacheVersion >= 2) {
+          if (rawData.msalCache && typeof rawData.msalCache === 'string') {
+            console.error('[AUTH] Token cache version 2+ detected - MSAL cache plugin will handle loading');
+            return;
+          } else {
+            console.error('[AUTH] Version 2+ cache missing msalCache field, will re-authenticate');
+            // Don't delete - let MSAL handle it
+            return;
+          }
+        }
+
+        // Only validate legacy (version 1) caches with legacy validator
         if (!this.validateTokenCache(rawData)) {
           console.error('[AUTH] Invalid token cache structure, ignoring cached tokens');
           // Delete corrupted cache file
@@ -398,15 +414,6 @@ export class GraphAuthProvider {
         }
 
         const cache: TokenCache = rawData;
-
-        // Determine cache version (default to 1 if not present for legacy caches)
-        const cacheVersion = cache.version || 1;
-
-        // Version 2+ uses MSAL cache plugin (loaded automatically)
-        if (cacheVersion >= 2) {
-          console.error('[AUTH] Token cache version 2+ detected - MSAL cache plugin will handle loading');
-          return;
-        }
 
         // Legacy cache (no version field or version 1) - manually load access token
         if (cache.expiresOn && cache.expiresOn > Date.now()) {
