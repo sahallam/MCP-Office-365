@@ -125,50 +125,35 @@ export class GraphAuthProvider {
     return {
       beforeCacheAccess: async (cacheContext: TokenCacheContext): Promise<void> => {
         try {
-          console.error(`[AUTH-DEBUG] beforeCacheAccess called, checking for cache at: ${this.tokenCachePath}`);
           if (fs.existsSync(this.tokenCachePath)) {
-            console.error('[AUTH-DEBUG] Cache file EXISTS, reading...');
             const fileContent = fs.readFileSync(this.tokenCachePath, 'utf-8');
-            console.error(`[AUTH-DEBUG] Cache file read, length: ${fileContent.length}`);
 
             let decryptedData: string;
             try {
-              // Try to decrypt first (new encrypted format)
               decryptedData = this.decryptTokenCache(fileContent);
-              console.error('[AUTH-DEBUG] Cache decrypted successfully');
             } catch {
               // Fall back to unencrypted format (for backward compatibility)
-              console.error('[AUTH] Token cache not encrypted, will re-encrypt on next save');
               decryptedData = fileContent;
             }
 
-            // Parse JSON
             const cache: TokenCache = JSON.parse(decryptedData);
-            console.error(`[AUTH-DEBUG] Cache parsed, version: ${cache.version}`);
 
             // Load MSAL cache if available (version 2+)
             if (cache.version !== undefined && cache.version >= 2 && cache.msalCache) {
               cacheContext.tokenCache.deserialize(cache.msalCache);
-              console.error(`[AUTH-DEBUG] ✅ MSAL cache loaded (${cache.msalCache.length} chars)`);
-            } else {
-              console.error('[AUTH-DEBUG] ⚠️  Cache is legacy format or missing MSAL data');
             }
-          } else {
-            console.error('[AUTH-DEBUG] ❌ Cache file does NOT exist');
           }
         } catch (error) {
-          console.error('[AUTH] ❌ Failed to load MSAL cache:', error);
+          console.error('[AUTH] Failed to load MSAL cache:', error);
           // Don't throw - allow MSAL to continue with empty cache
         }
       },
 
       afterCacheAccess: async (cacheContext: TokenCacheContext): Promise<void> => {
-        console.error(`[AUTH-DEBUG] afterCacheAccess called, cacheHasChanged: ${cacheContext.cacheHasChanged}`);
         if (cacheContext.cacheHasChanged) {
           try {
             // Serialize the entire MSAL cache (includes refresh tokens, accounts, etc.)
             const msalCacheData = cacheContext.tokenCache.serialize();
-            console.error(`[AUTH-DEBUG] MSAL cache serialized, length: ${msalCacheData.length}`);
 
             // Create enhanced cache structure
             const cache: TokenCache = {
@@ -189,25 +174,20 @@ export class GraphAuthProvider {
 
             // Atomically rename to final location
             fs.renameSync(tempPath, this.tokenCachePath);
-            console.error(`[AUTH-DEBUG] ✅ Cache saved to: ${this.tokenCachePath}`);
 
             // Verify permissions on the final file
             try {
               const stats = fs.statSync(this.tokenCachePath);
               const permissions = stats.mode & 0o777;
               if (permissions !== 0o600) {
-                console.error(`[AUTH] WARNING: Token cache file has insecure permissions (${permissions.toString(8)}). Expected 0600.`);
-                // Try to fix permissions
                 fs.chmodSync(this.tokenCachePath, 0o600);
               }
-            } catch (permError) {
-              console.error('[AUTH] Failed to verify/fix token cache permissions:', permError);
+            } catch {
+              // Ignore permission verification errors
             }
           } catch (error) {
-            console.error('[AUTH] ❌ Failed to save MSAL cache:', error);
+            console.error('[AUTH] Failed to save MSAL cache:', error);
           }
-        } else {
-          console.error('[AUTH-DEBUG] Cache has NOT changed, skipping save');
         }
       },
     };
@@ -499,30 +479,21 @@ export class GraphAuthProvider {
 
     // Start authentication in background (don't await)
     (this.msalClient as PublicClientApplication).acquireTokenByDeviceCode(deviceCodeRequest)
-      .then(async (response) => {
-        console.error('[AUTH-DEBUG] Background auth promise resolved');
+      .then((response) => {
         if (response && response.accessToken) {
-          console.error('[AUTH-DEBUG] Got access token, length:', response.accessToken.length);
           this.accessToken = response.accessToken;
           this.tokenExpiry = new Date(response.expiresOn!.getTime() - 5 * 60 * 1000);
           this.userAccount = response.account;
-          console.error('[AUTH-DEBUG] Account:', response.account?.username || 'unknown');
-
-          // Check if cache was updated by MSAL
-          const accounts = await (this.msalClient as PublicClientApplication).getTokenCache().getAllAccounts();
-          console.error(`[AUTH-DEBUG] Accounts in cache after auth: ${accounts.length}`);
 
           console.error('✅ Authentication successful! Session saved.');
 
           // Clear pending device code after successful auth
           this.pendingDeviceCode = null;
           this.authenticationInProgress = false;
-        } else {
-          console.error('[AUTH-DEBUG] ❌ No access token in response');
         }
       })
       .catch((error) => {
-        console.error('[AUTH-DEBUG] ❌ Background auth promise rejected:', error.message || error);
+        console.error('[AUTH] Authentication failed:', error.message || error);
         this.pendingDeviceCode = null;
         this.authenticationInProgress = false;
       });

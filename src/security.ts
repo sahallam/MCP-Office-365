@@ -40,24 +40,30 @@ export function escapeHtml(text: string): string {
 
 /**
  * Sanitize HTML content allowing only safe tags and attributes
- * Note: This is a basic implementation. For production, consider using a library like DOMPurify
+ *
+ * WARNING: This is a basic implementation suitable for development and testing.
+ * For production environments with untrusted user input, consider using a
+ * comprehensive HTML sanitization library like DOMPurify:
+ *
+ * Installation: npm install dompurify @types/dompurify
+ * Usage: import DOMPurify from 'dompurify';
+ *        const clean = DOMPurify.sanitize(dirty);
+ *
+ * @param html - The HTML string to sanitize
+ * @param _allowedTags - Reserved for future use with allowlist-based sanitization
+ * @returns Sanitized HTML string with dangerous elements removed
  */
 export function sanitizeHtmlContent(html: string, _allowedTags: string[] = []): string {
   if (!html || typeof html !== 'string') {
     return '';
   }
 
-  // Remove script tags and event handlers
-  // Note: _allowedTags parameter (prefixed with _ to indicate intentionally unused)
-  // is available for future enhancement with a proper HTML sanitizer library
+  // Remove script tags, event handlers, and javascript: URLs
+  // Note: _allowedTags parameter is available for future enhancement
   let sanitized = html
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
     .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
     .replace(/javascript:/gi, '');
-
-  // For a more comprehensive solution, consider using a library like DOMPurify
-  // For now, we remove dangerous elements and attributes
-  // This is a simple implementation; for production, use a proper HTML sanitizer library
 
   return sanitized;
 }

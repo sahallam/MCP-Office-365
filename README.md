@@ -260,9 +260,15 @@ TENANT_ID=your-tenant-id
 CLIENT_ID=your-client-id
 AUTH_MODE=delegated
 
+# Optional: Custom encryption key for token cache (recommended for production)
+# Generate with: openssl rand -hex 32
+# TOKEN_ENCRYPTION_KEY=your-64-character-hex-key
+
 # Optional: Custom Graph API endpoint
 # GRAPH_API_ENDPOINT=https://graph.microsoft.com/v1.0
 ```
+
+> **Security Note**: For production deployments, set `TOKEN_ENCRYPTION_KEY` to a 64-character hex string (32 bytes). Without this, the token cache is encrypted using a key derived from your machine's hostname and username, which changes if you move to a different machine or user account.
 
 #### For App-Only Authentication
 
@@ -325,11 +331,9 @@ Add this to your Claude Desktop configuration file:
 }
 ```
 
-**First-time setup**: When you start Claude Desktop, check the logs for device code authentication instructions. You'll see a URL and code to enter in your browser to sign in.
+**First-time setup**: When you first use the connector, a device code will appear directly in Claude Desktop. Open the URL shown and enter the code to sign in with your Microsoft account. After authentication, your session will persist for ~90 days.
 
-**Logs location**:
-- macOS: `~/Library/Logs/Claude/mcp*.log`
-- Windows: `%APPDATA%\Claude\logs\mcp*.log`
+**If you need to check authentication status**, use the `auth_status` tool which will show you whether you're authenticated or provide a new device code if needed.
 
 #### App-Only Authentication
 
@@ -366,7 +370,17 @@ The server provides the following MCP tools:
 - `calendar_list_events` - List calendar events
 - `calendar_get_view` - Get calendar view for a time range
 - `calendar_create_event` - Create a calendar event
+- `calendar_update_event` - Update a calendar event
 - `calendar_delete_event` - Delete a calendar event
+- `calendar_get_event` - Get a specific event by ID
+- `calendar_accept_meeting` - Accept a meeting invitation
+- `calendar_decline_meeting` - Decline a meeting invitation
+- `calendar_tentatively_accept_meeting` - Tentatively accept a meeting
+- `calendar_find_meeting_times` - Find available meeting times
+- `calendar_list_calendars` - List all calendars
+
+#### Authentication Tools
+- `auth_status` - Check authentication status and get re-auth instructions if needed
 
 #### OneDrive Tools
 - `onedrive_list_items` - List files and folders
@@ -465,14 +479,15 @@ The server supports two authentication flows:
 
 #### Delegated Authentication (Device Code Flow)
 
-1. Server starts and checks for cached access token
-2. If no valid token exists, prompts user with a device code
+1. Server starts and checks for cached tokens in `~/.office365-mcp-token-cache.json`
+2. If no valid token exists, a device code is displayed directly in Claude Desktop
 3. User opens browser, navigates to the URL, and enters the code
 4. User signs in and grants consent to requested permissions
 5. Server receives access token and refresh token
-6. Tokens are cached locally in `.token-cache.json`
+6. Tokens are encrypted (AES-256-GCM) and cached locally
 7. For subsequent requests, tokens are automatically refreshed using MSAL cache
-8. User only needs to authenticate once (until token expires)
+8. **Authentication persists for ~90 days** (or longer depending on organization's token policies)
+9. Re-authentication is only required if the connector is not used for the full refresh token lifetime
 
 #### App-Only Authentication (Client Credentials Flow)
 
@@ -624,9 +639,10 @@ This server follows OWASP Top 10 (2021) security guidelines:
 
 **Delegated Authentication Issues**
 - **"Allow public client flows" not enabled**: Go to Azure Portal > Your App > Authentication > Advanced settings > Set to "Yes"
-- **Can't see device code**: Check Claude Desktop logs at `~/Library/Logs/Claude/mcp*.log` (macOS) or `%APPDATA%\Claude\logs\` (Windows)
-- **Token expired**: Delete `.token-cache.json` and restart to re-authenticate
+- **Device code not showing**: The device code is displayed directly in Claude Desktop when authentication is required. If you don't see it, use the `auth_status` tool to check your authentication status.
+- **Token expired**: Delete `~/.office365-mcp-token-cache.json` and restart to re-authenticate
 - **Wrong permissions**: Ensure delegated permissions (not application permissions) are configured in Azure Portal
+- **Token not persisting**: Ensure the token cache file at `~/.office365-mcp-token-cache.json` has proper permissions (should be readable/writable by your user)
 
 **App-Only Authentication Errors**
 - Verify your `TENANT_ID`, `CLIENT_ID`, and `CLIENT_SECRET` are correct
@@ -736,7 +752,7 @@ This server implements enterprise-grade security following OWASP Top 10 (2021) g
 - **Authentication Mode Restrictions**:
   - **App-only**: Limited Teams support, OneNote deprecated (March 31, 2025)
   - **Delegated**: Requires user to authenticate via browser (device code flow)
-- **Token Lifetime**: Delegated auth tokens expire and require re-authentication periodically
+- **Token Lifetime**: Delegated auth tokens persist for ~90 days with automatic refresh. Re-authentication is only needed if the connector is not used for the full refresh token lifetime.
 
 ## Contributing
 

@@ -6,6 +6,31 @@ import { Client } from '@microsoft/microsoft-graph-client';
 import { EmailMessage } from '../types.js';
 import { sanitizeSearchQuery, validateResourceId, validateContentLength, SIZE_LIMITS } from '../security.js';
 
+/**
+ * Formats email body text by converting plain text line breaks to HTML.
+ * If the text already contains HTML tags, returns it unchanged.
+ * @param text - The email body text to format
+ * @returns Formatted HTML string
+ */
+function formatEmailBody(text: string): string {
+  // If it already contains HTML tags, use as-is
+  if (/<[a-z][\s\S]*>/i.test(text)) {
+    return text;
+  }
+
+  // Convert plain text with line breaks to HTML
+  // Preserve leading/trailing spaces by converting them to &nbsp;
+  return text
+    .split('\n')
+    .map(line => {
+      if (line === '') return '&nbsp;'; // Empty lines become non-breaking spaces
+      // Convert leading/trailing spaces to &nbsp; to preserve indentation
+      return line.replace(/^ +/, match => '&nbsp;'.repeat(match.length))
+                 .replace(/ +$/, match => '&nbsp;'.repeat(match.length));
+    })
+    .join('<br>');
+}
+
 export class OutlookTools {
   constructor(private graphClient: Client, private userId: string) {}
 
@@ -19,6 +44,12 @@ export class OutlookTools {
 
   /**
    * List emails from inbox
+   * @param options - Query options for filtering and pagination
+   * @param options.top - Number of emails to retrieve (default: 10)
+   * @param options.filter - OData filter string
+   * @param options.orderBy - Sort order (default: receivedDateTime DESC)
+   * @param options.select - Fields to return
+   * @returns Array of email messages
    */
   async listEmails(options: {
     top?: number;
@@ -49,6 +80,9 @@ export class OutlookTools {
 
   /**
    * Get a specific email by ID
+   * @param messageId - The unique identifier of the email message
+   * @returns The email message details
+   * @throws Error if messageId is invalid
    */
   async getEmail(messageId: string): Promise<EmailMessage> {
     validateResourceId(messageId, 'message');
@@ -62,18 +96,23 @@ export class OutlookTools {
 
   /**
    * Send an email
+   * @param message - The email message to send
+   * @throws Error if email content exceeds size limits
    */
   async sendEmail(message: EmailMessage): Promise<void> {
     // Validate email size limits
     validateContentLength(message.subject, SIZE_LIMITS.MAX_EMAIL_SUBJECT_SIZE, 'Email subject');
     validateContentLength(message.body.content, SIZE_LIMITS.MAX_EMAIL_BODY_SIZE, 'Email body');
 
+    // Format the email body (converts plain text line breaks to HTML)
+    const formattedContent = formatEmailBody(message.body.content);
+
     const mailObject = {
       message: {
         subject: message.subject,
         body: {
-          contentType: message.body.contentType,
-          content: message.body.content,
+          contentType: 'HTML',
+          content: formattedContent,
         },
         toRecipients: message.toRecipients,
         ccRecipients: message.ccRecipients || [],
@@ -90,6 +129,10 @@ export class OutlookTools {
 
   /**
    * Reply to an email
+   * @param messageId - The unique identifier of the email to reply to
+   * @param comment - The reply message content
+   * @param replyAll - Whether to reply to all recipients (default: false)
+   * @throws Error if messageId is invalid or comment exceeds size limits
    */
   async replyToEmail(messageId: string, comment: string, replyAll: boolean = false): Promise<void> {
     validateResourceId(messageId, 'message');
@@ -97,15 +140,21 @@ export class OutlookTools {
 
     const endpoint = replyAll ? 'replyAll' : 'reply';
 
+    // Format the comment (converts plain text line breaks to HTML)
+    const formattedComment = formatEmailBody(comment);
+
     await this.graphClient
       .api(`${this.getUserPath()}/messages/${messageId}/${endpoint}`)
       .post({
-        comment,
+        comment: formattedComment,
       });
   }
 
   /**
    * Search emails
+   * @param searchQuery - The search query string
+   * @param top - Maximum number of results to return (default: 10)
+   * @returns Array of matching email messages
    */
   async searchEmails(searchQuery: string, top: number = 10): Promise<EmailMessage[]> {
     // Sanitize search query to prevent OData injection
@@ -123,6 +172,8 @@ export class OutlookTools {
 
   /**
    * Mark email as read/unread
+   * @param messageId - The unique identifier of the email
+   * @param isRead - Whether to mark as read (true) or unread (false)
    */
   async markEmailAsRead(messageId: string, isRead: boolean = true): Promise<void> {
     validateResourceId(messageId, 'message');
@@ -136,6 +187,7 @@ export class OutlookTools {
 
   /**
    * Delete an email
+   * @param messageId - The unique identifier of the email to delete
    */
   async deleteEmail(messageId: string): Promise<void> {
     validateResourceId(messageId, 'message');
@@ -147,6 +199,8 @@ export class OutlookTools {
 
   /**
    * Move email to folder
+   * @param messageId - The unique identifier of the email to move
+   * @param destinationFolderId - The ID of the destination folder
    */
   async moveEmail(messageId: string, destinationFolderId: string): Promise<void> {
     validateResourceId(messageId, 'message');
@@ -161,6 +215,7 @@ export class OutlookTools {
 
   /**
    * List mail folders
+   * @returns Array of mail folder objects
    */
   async listMailFolders(): Promise<any[]> {
     const result = await this.graphClient
@@ -172,6 +227,8 @@ export class OutlookTools {
 
   /**
    * Create a draft email
+   * @param message - The email message to save as draft
+   * @returns The created draft message
    */
   async createDraft(message: EmailMessage): Promise<EmailMessage> {
     const draft = await this.graphClient
