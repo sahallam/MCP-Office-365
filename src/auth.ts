@@ -126,6 +126,7 @@ export class GraphAuthProvider {
       beforeCacheAccess: async (cacheContext: TokenCacheContext): Promise<void> => {
         try {
           if (fs.existsSync(this.tokenCachePath)) {
+            const stats = fs.statSync(this.tokenCachePath);
             const fileContent = fs.readFileSync(this.tokenCachePath, 'utf-8');
 
             let decryptedData: string;
@@ -141,10 +142,12 @@ export class GraphAuthProvider {
             // Load MSAL cache if available (version 2+)
             if (cache.version !== undefined && cache.version >= 2 && cache.msalCache) {
               cacheContext.tokenCache.deserialize(cache.msalCache);
+              const lastUpdated = cache.lastUpdated ? new Date(cache.lastUpdated).toLocaleString() : 'unknown';
+              console.error(`[AUTH] Loaded cached session (${stats.size} bytes, saved ${lastUpdated})`);
             }
           }
         } catch (error) {
-          console.error('[AUTH] Failed to load MSAL cache:', error);
+          console.error('[AUTH] Cache load error:', error instanceof Error ? error.message : error);
           // Don't throw - allow MSAL to continue with empty cache
         }
       },
@@ -175,9 +178,12 @@ export class GraphAuthProvider {
             // Atomically rename to final location
             fs.renameSync(tempPath, this.tokenCachePath);
 
+            // Verify the file was saved
+            const stats = fs.statSync(this.tokenCachePath);
+            console.error(`[AUTH] Session cached (${stats.size} bytes)`);
+
             // Verify permissions on the final file
             try {
-              const stats = fs.statSync(this.tokenCachePath);
               const permissions = stats.mode & 0o777;
               if (permissions !== 0o600) {
                 fs.chmodSync(this.tokenCachePath, 0o600);
@@ -186,7 +192,7 @@ export class GraphAuthProvider {
               // Ignore permission verification errors
             }
           } catch (error) {
-            console.error('[AUTH] Failed to save MSAL cache:', error);
+            console.error('[AUTH] Cache save error:', error instanceof Error ? error.message : error);
           }
         }
       },
@@ -533,6 +539,7 @@ export class GraphAuthProvider {
 
       if (accounts.length === 0) {
         // No accounts in cache, need to authenticate
+        console.error('[AUTH] No cached session found, authentication required');
         return this.acquireTokenByDeviceCode();
       }
 
@@ -553,9 +560,12 @@ export class GraphAuthProvider {
       this.tokenExpiry = new Date(response.expiresOn!.getTime() - 5 * 60 * 1000);
       this.userAccount = response.account;
 
+      console.error(`[AUTH] Authenticated as ${account.username || 'user'}`);
       return this.accessToken;
     } catch (error) {
       // Fall back to device code authentication
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.error(`[AUTH] Session refresh failed: ${errorMsg}`);
       return this.acquireTokenByDeviceCode();
     }
   }

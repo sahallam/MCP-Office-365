@@ -1164,6 +1164,10 @@ async function main() {
     console.error('stdin error:', err);
   });
 
+  // Log startup info
+  const toolCount = TOOLS.length;
+  console.error(`Office 365 MCP Server started (${authMode} auth, ${toolCount} tools)`);
+
   const transport = new StdioServerTransport();
   await server.connect(transport);
 }
