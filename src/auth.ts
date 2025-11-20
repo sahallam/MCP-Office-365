@@ -125,38 +125,29 @@ export class GraphAuthProvider {
     return {
       beforeCacheAccess: async (cacheContext: TokenCacheContext): Promise<void> => {
         try {
-          console.error('[AUTH] MSAL beforeCacheAccess triggered');
           if (fs.existsSync(this.tokenCachePath)) {
             const stats = fs.statSync(this.tokenCachePath);
-            console.error(`[AUTH] Cache file exists (${stats.size} bytes), loading...`);
             const fileContent = fs.readFileSync(this.tokenCachePath, 'utf-8');
 
             let decryptedData: string;
             try {
               decryptedData = this.decryptTokenCache(fileContent);
-              console.error('[AUTH] Successfully decrypted cache');
             } catch {
               // Fall back to unencrypted format (for backward compatibility)
-              console.error('[AUTH] Decryption failed, trying unencrypted format');
               decryptedData = fileContent;
             }
 
             const cache: TokenCache = JSON.parse(decryptedData);
-            console.error(`[AUTH] Parsed cache - version: ${cache.version}, lastUpdated: ${cache.lastUpdated ? new Date(cache.lastUpdated).toISOString() : 'N/A'}`);
 
             // Load MSAL cache if available (version 2+)
             if (cache.version !== undefined && cache.version >= 2 && cache.msalCache) {
-              console.error(`[AUTH] Deserializing MSAL cache (${cache.msalCache.length} chars)`);
               cacheContext.tokenCache.deserialize(cache.msalCache);
-              console.error('[AUTH] MSAL cache deserialized successfully');
-            } else {
-              console.error('[AUTH] No MSAL cache to deserialize (legacy format or missing)');
+              const lastUpdated = cache.lastUpdated ? new Date(cache.lastUpdated).toLocaleString() : 'unknown';
+              console.error(`[AUTH] Loaded cached session (${stats.size} bytes, saved ${lastUpdated})`);
             }
-          } else {
-            console.error('[AUTH] No cache file found at:', this.tokenCachePath);
           }
         } catch (error) {
-          console.error('[AUTH] Failed to load MSAL cache:', error);
+          console.error('[AUTH] Cache load error:', error instanceof Error ? error.message : error);
           // Don't throw - allow MSAL to continue with empty cache
         }
       },
@@ -164,10 +155,8 @@ export class GraphAuthProvider {
       afterCacheAccess: async (cacheContext: TokenCacheContext): Promise<void> => {
         if (cacheContext.cacheHasChanged) {
           try {
-            console.error('[AUTH] MSAL afterCacheAccess: cache has changed, saving...');
             // Serialize the entire MSAL cache (includes refresh tokens, accounts, etc.)
             const msalCacheData = cacheContext.tokenCache.serialize();
-            console.error(`[AUTH] Serialized MSAL cache (${msalCacheData.length} chars)`);
 
             // Create enhanced cache structure
             const cache: TokenCache = {
@@ -191,7 +180,7 @@ export class GraphAuthProvider {
 
             // Verify the file was saved
             const stats = fs.statSync(this.tokenCachePath);
-            console.error(`[AUTH] Cache saved successfully (${stats.size} bytes) at ${this.tokenCachePath}`);
+            console.error(`[AUTH] Session cached (${stats.size} bytes)`);
 
             // Verify permissions on the final file
             try {
@@ -203,10 +192,8 @@ export class GraphAuthProvider {
               // Ignore permission verification errors
             }
           } catch (error) {
-            console.error('[AUTH] Failed to save MSAL cache:', error);
+            console.error('[AUTH] Cache save error:', error instanceof Error ? error.message : error);
           }
-        } else {
-          console.error('[AUTH] MSAL afterCacheAccess: cache unchanged, not saving');
         }
       },
     };
@@ -547,20 +534,17 @@ export class GraphAuthProvider {
    */
   private async acquireTokenSilent(): Promise<string> {
     try {
-      console.error('[AUTH] Attempting silent token acquisition...');
       // Get all accounts from MSAL cache
       const accounts = await (this.msalClient as PublicClientApplication).getTokenCache().getAllAccounts();
-      console.error(`[AUTH] Found ${accounts.length} account(s) in MSAL cache`);
 
       if (accounts.length === 0) {
         // No accounts in cache, need to authenticate
-        console.error('[AUTH] No accounts in cache, falling back to device code flow');
+        console.error('[AUTH] No cached session found, authentication required');
         return this.acquireTokenByDeviceCode();
       }
 
       // Use the first account (or the cached account if available)
       const account = this.userAccount || accounts[0];
-      console.error(`[AUTH] Using account: ${account.username || account.homeAccountId}`);
 
       const response = await (this.msalClient as PublicClientApplication).acquireTokenSilent({
         account,
@@ -569,7 +553,6 @@ export class GraphAuthProvider {
       });
 
       if (!response || !response.accessToken) {
-        console.error('[AUTH] Silent acquisition returned no token, falling back to device code');
         return this.acquireTokenByDeviceCode();
       }
 
@@ -577,12 +560,12 @@ export class GraphAuthProvider {
       this.tokenExpiry = new Date(response.expiresOn!.getTime() - 5 * 60 * 1000);
       this.userAccount = response.account;
 
-      console.error(`[AUTH] Silent acquisition successful, token expires: ${this.tokenExpiry.toISOString()}`);
+      console.error(`[AUTH] Authenticated as ${account.username || 'user'}`);
       return this.accessToken;
     } catch (error) {
       // Fall back to device code authentication
       const errorMsg = error instanceof Error ? error.message : String(error);
-      console.error(`[AUTH] Silent acquisition failed: ${errorMsg}, falling back to device code`);
+      console.error(`[AUTH] Session refresh failed: ${errorMsg}`);
       return this.acquireTokenByDeviceCode();
     }
   }
