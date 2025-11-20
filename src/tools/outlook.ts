@@ -19,9 +19,15 @@ function formatEmailBody(text: string): string {
   }
 
   // Convert plain text with line breaks to HTML
+  // Preserve leading/trailing spaces by converting them to &nbsp;
   return text
     .split('\n')
-    .map(line => line.trim() || '&nbsp;') // Empty lines become non-breaking spaces
+    .map(line => {
+      if (line === '') return '&nbsp;'; // Empty lines become non-breaking spaces
+      // Convert leading/trailing spaces to &nbsp; to preserve indentation
+      return line.replace(/^ +/, match => '&nbsp;'.repeat(match.length))
+                 .replace(/ +$/, match => '&nbsp;'.repeat(match.length));
+    })
     .join('<br>');
 }
 
