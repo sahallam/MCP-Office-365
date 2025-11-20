@@ -260,9 +260,15 @@ TENANT_ID=your-tenant-id
 CLIENT_ID=your-client-id
 AUTH_MODE=delegated
 
+# Optional: Custom encryption key for token cache (recommended for production)
+# Generate with: openssl rand -hex 32
+# TOKEN_ENCRYPTION_KEY=your-64-character-hex-key
+
 # Optional: Custom Graph API endpoint
 # GRAPH_API_ENDPOINT=https://graph.microsoft.com/v1.0
 ```
+
+> **Security Note**: For production deployments, set `TOKEN_ENCRYPTION_KEY` to a 64-character hex string (32 bytes). Without this, the token cache is encrypted using a key derived from your machine's hostname and username, which changes if you move to a different machine or user account.
 
 #### For App-Only Authentication
 

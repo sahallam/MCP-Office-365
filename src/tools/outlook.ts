@@ -44,6 +44,12 @@ export class OutlookTools {
 
   /**
    * List emails from inbox
+   * @param options - Query options for filtering and pagination
+   * @param options.top - Number of emails to retrieve (default: 10)
+   * @param options.filter - OData filter string
+   * @param options.orderBy - Sort order (default: receivedDateTime DESC)
+   * @param options.select - Fields to return
+   * @returns Array of email messages
    */
   async listEmails(options: {
     top?: number;
@@ -74,6 +80,9 @@ export class OutlookTools {
 
   /**
    * Get a specific email by ID
+   * @param messageId - The unique identifier of the email message
+   * @returns The email message details
+   * @throws Error if messageId is invalid
    */
   async getEmail(messageId: string): Promise<EmailMessage> {
     validateResourceId(messageId, 'message');
@@ -87,6 +96,8 @@ export class OutlookTools {
 
   /**
    * Send an email
+   * @param message - The email message to send
+   * @throws Error if email content exceeds size limits
    */
   async sendEmail(message: EmailMessage): Promise<void> {
     // Validate email size limits
@@ -118,6 +129,10 @@ export class OutlookTools {
 
   /**
    * Reply to an email
+   * @param messageId - The unique identifier of the email to reply to
+   * @param comment - The reply message content
+   * @param replyAll - Whether to reply to all recipients (default: false)
+   * @throws Error if messageId is invalid or comment exceeds size limits
    */
   async replyToEmail(messageId: string, comment: string, replyAll: boolean = false): Promise<void> {
     validateResourceId(messageId, 'message');
@@ -137,6 +152,9 @@ export class OutlookTools {
 
   /**
    * Search emails
+   * @param searchQuery - The search query string
+   * @param top - Maximum number of results to return (default: 10)
+   * @returns Array of matching email messages
    */
   async searchEmails(searchQuery: string, top: number = 10): Promise<EmailMessage[]> {
     // Sanitize search query to prevent OData injection
@@ -154,6 +172,8 @@ export class OutlookTools {
 
   /**
    * Mark email as read/unread
+   * @param messageId - The unique identifier of the email
+   * @param isRead - Whether to mark as read (true) or unread (false)
    */
   async markEmailAsRead(messageId: string, isRead: boolean = true): Promise<void> {
     validateResourceId(messageId, 'message');
@@ -167,6 +187,7 @@ export class OutlookTools {
 
   /**
    * Delete an email
+   * @param messageId - The unique identifier of the email to delete
    */
   async deleteEmail(messageId: string): Promise<void> {
     validateResourceId(messageId, 'message');
@@ -178,6 +199,8 @@ export class OutlookTools {
 
   /**
    * Move email to folder
+   * @param messageId - The unique identifier of the email to move
+   * @param destinationFolderId - The ID of the destination folder
    */
   async moveEmail(messageId: string, destinationFolderId: string): Promise<void> {
     validateResourceId(messageId, 'message');
@@ -192,6 +215,7 @@ export class OutlookTools {
 
   /**
    * List mail folders
+   * @returns Array of mail folder objects
    */
   async listMailFolders(): Promise<any[]> {
     const result = await this.graphClient
@@ -203,6 +227,8 @@ export class OutlookTools {
 
   /**
    * Create a draft email
+   * @param message - The email message to save as draft
+   * @returns The created draft message
    */
   async createDraft(message: EmailMessage): Promise<EmailMessage> {
     const draft = await this.graphClient
