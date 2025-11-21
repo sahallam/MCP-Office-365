@@ -76,6 +76,21 @@ export class GraphAuthProvider {
   private pendingDeviceCode: { userCode: string; verificationUri: string; expiresIn: number } | null = null;
   private authenticationInProgress: boolean = false;
 
+  // Scopes for delegated authentication - must be consistent between acquireTokenByDeviceCode and acquireTokenSilent
+  private static readonly DELEGATED_SCOPES = [
+    'User.Read',
+    'Mail.ReadWrite',
+    'Mail.Send',
+    'Calendars.ReadWrite',
+    'Files.ReadWrite.All',
+    'Notes.ReadWrite.All',
+    'Team.ReadBasic.All',
+    'Channel.ReadBasic.All',
+    'ChannelMessage.Read.All',
+    'Chat.Read',
+    'Chat.ReadWrite',
+  ];
+
   constructor(config: GraphConfig) {
     this.config = config;
     // Use home directory for token cache to avoid permission issues when running from system directories
@@ -446,19 +461,7 @@ export class GraphAuthProvider {
     });
 
     const deviceCodeRequest: DeviceCodeRequest = {
-      scopes: [
-        'User.Read',
-        'Mail.ReadWrite',
-        'Mail.Send',
-        'Calendars.ReadWrite',
-        'Files.ReadWrite.All',
-        'Notes.ReadWrite.All',
-        'Team.ReadBasic.All',
-        'Channel.ReadBasic.All',
-        'ChannelMessage.Read.All',
-        'Chat.Read',
-        'Chat.ReadWrite',
-      ],
+      scopes: GraphAuthProvider.DELEGATED_SCOPES,
       deviceCodeCallback: (response) => {
         // Store device code info for immediate error reporting
         this.pendingDeviceCode = {
@@ -548,7 +551,7 @@ export class GraphAuthProvider {
 
       const response = await (this.msalClient as PublicClientApplication).acquireTokenSilent({
         account,
-        scopes: ['https://graph.microsoft.com/.default'],
+        scopes: GraphAuthProvider.DELEGATED_SCOPES,
         forceRefresh: false, // Use cached token if valid, otherwise use refresh token
       });
 
