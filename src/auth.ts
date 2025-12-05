@@ -147,9 +147,11 @@ export class GraphAuthProvider {
             let decryptedData: string;
             try {
               decryptedData = this.decryptTokenCache(fileContent);
+              console.error('[AUTH] Cache file decrypted successfully');
             } catch {
               // Fall back to unencrypted format (for backward compatibility)
               decryptedData = fileContent;
+              console.error('[AUTH] Using unencrypted cache format');
             }
 
             const cache: TokenCache = JSON.parse(decryptedData);
@@ -158,8 +160,20 @@ export class GraphAuthProvider {
             if (cache.version !== undefined && cache.version >= 2 && cache.msalCache) {
               cacheContext.tokenCache.deserialize(cache.msalCache);
               const lastUpdated = cache.lastUpdated ? new Date(cache.lastUpdated).toLocaleString() : 'unknown';
+
+              // Parse MSAL cache to show what's in it
+              const msalCache = JSON.parse(cache.msalCache);
+              const accountCount = Object.keys(msalCache.Account || {}).length;
+              const accessTokenCount = Object.keys(msalCache.AccessToken || {}).length;
+              const refreshTokenCount = Object.keys(msalCache.RefreshToken || {}).length;
+
               console.error(`[AUTH] Loaded cached session (${stats.size} bytes, saved ${lastUpdated})`);
+              console.error(`[AUTH] Cache contains: ${accountCount} accounts, ${accessTokenCount} access tokens, ${refreshTokenCount} refresh tokens`);
+            } else {
+              console.error('[AUTH] Cache file exists but no valid MSAL cache data found');
             }
+          } else {
+            console.error('[AUTH] No cache file found at:', this.tokenCachePath);
           }
         } catch (error) {
           console.error('[AUTH] Cache load error:', error instanceof Error ? error.message : error);
@@ -172,6 +186,14 @@ export class GraphAuthProvider {
           try {
             // Serialize the entire MSAL cache (includes refresh tokens, accounts, etc.)
             const msalCacheData = cacheContext.tokenCache.serialize();
+
+            // Parse to show what we're saving
+            const msalCache = JSON.parse(msalCacheData);
+            const accountCount = Object.keys(msalCache.Account || {}).length;
+            const accessTokenCount = Object.keys(msalCache.AccessToken || {}).length;
+            const refreshTokenCount = Object.keys(msalCache.RefreshToken || {}).length;
+
+            console.error(`[AUTH] Saving cache with: ${accountCount} accounts, ${accessTokenCount} access tokens, ${refreshTokenCount} refresh tokens`);
 
             // Create enhanced cache structure
             const cache: TokenCache = {
@@ -195,7 +217,7 @@ export class GraphAuthProvider {
 
             // Verify the file was saved
             const stats = fs.statSync(this.tokenCachePath);
-            console.error(`[AUTH] Session cached (${stats.size} bytes)`);
+            console.error(`[AUTH] Session cached successfully (${stats.size} bytes) at ${this.tokenCachePath}`);
 
             // Verify permissions on the final file
             try {
@@ -540,6 +562,8 @@ export class GraphAuthProvider {
       // Get all accounts from MSAL cache
       const accounts = await (this.msalClient as PublicClientApplication).getTokenCache().getAllAccounts();
 
+      console.error(`[AUTH] Attempting silent token acquisition, found ${accounts.length} account(s) in cache`);
+
       if (accounts.length === 0) {
         // No accounts in cache, need to authenticate
         console.error('[AUTH] No cached session found, authentication required');
@@ -548,6 +572,8 @@ export class GraphAuthProvider {
 
       // Use the first account (or the cached account if available)
       const account = this.userAccount || accounts[0];
+      console.error(`[AUTH] Using account: ${account.username || account.homeAccountId}`);
+      console.error(`[AUTH] Requesting scopes: ${GraphAuthProvider.DELEGATED_SCOPES.join(', ')}`);
 
       const response = await (this.msalClient as PublicClientApplication).acquireTokenSilent({
         account,
@@ -556,6 +582,7 @@ export class GraphAuthProvider {
       });
 
       if (!response || !response.accessToken) {
+        console.error('[AUTH] Silent token acquisition returned no token');
         return this.acquireTokenByDeviceCode();
       }
 
@@ -563,12 +590,13 @@ export class GraphAuthProvider {
       this.tokenExpiry = new Date(response.expiresOn!.getTime() - 5 * 60 * 1000);
       this.userAccount = response.account;
 
-      console.error(`[AUTH] Authenticated as ${account.username || 'user'}`);
+      const tokenSource = response.fromCache ? 'cache' : 'refresh token';
+      console.error(`[AUTH] Successfully acquired token from ${tokenSource} for ${account.username || 'user'}`);
       return this.accessToken;
     } catch (error) {
       // Fall back to device code authentication
       const errorMsg = error instanceof Error ? error.message : String(error);
-      console.error(`[AUTH] Session refresh failed: ${errorMsg}`);
+      console.error(`[AUTH] Silent token acquisition failed: ${errorMsg}`);
       return this.acquireTokenByDeviceCode();
     }
   }
