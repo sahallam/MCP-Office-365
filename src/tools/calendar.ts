@@ -5,9 +5,15 @@
 import { Client } from '@microsoft/microsoft-graph-client';
 import { CalendarEvent } from '../types.js';
 import { validateResourceId } from '../security.js';
+import { detectSystemTimezone, convertEventToLocalTimezone, convertEventsToLocalTimezone } from '../utils/timezone.js';
 
 export class CalendarTools {
-  constructor(private graphClient: Client, private userId: string) {}
+  private localTimezone: string;
+
+  constructor(private graphClient: Client, private userId: string) {
+    this.localTimezone = detectSystemTimezone();
+    console.error(`[Calendar] Detected system timezone: ${this.localTimezone}`);
+  }
 
   /**
    * Get the correct user path for API endpoints
@@ -39,7 +45,7 @@ export class CalendarTools {
     }
 
     const result = await query.get();
-    return result.value;
+    return convertEventsToLocalTimezone(result.value, this.localTimezone);
   }
 
   /**
@@ -56,7 +62,7 @@ export class CalendarTools {
       .orderby('start/dateTime')
       .get();
 
-    return result.value;
+    return convertEventsToLocalTimezone(result.value, this.localTimezone);
   }
 
   /**
@@ -69,7 +75,7 @@ export class CalendarTools {
       .api(`${this.getUserPath()}/calendar/events/${eventId}`)
       .get();
 
-    return event;
+    return convertEventToLocalTimezone(event, this.localTimezone);
   }
 
   /**
@@ -90,7 +96,7 @@ export class CalendarTools {
       .api(`${this.getUserPath()}/calendar/events`)
       .post(eventObject);
 
-    return createdEvent;
+    return convertEventToLocalTimezone(createdEvent, this.localTimezone);
   }
 
   /**
@@ -103,7 +109,7 @@ export class CalendarTools {
       .api(`${this.getUserPath()}/calendar/events/${eventId}`)
       .patch(updates);
 
-    return updatedEvent;
+    return convertEventToLocalTimezone(updatedEvent, this.localTimezone);
   }
 
   /**
