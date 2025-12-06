@@ -70,15 +70,31 @@ export function detectSystemTimezone(): string {
 
 /**
  * Convert a datetime string from one timezone to another
- * @param dateTime ISO 8601 datetime string
- * @param _fromTimeZone Source timezone (typically 'UTC') - not used in current implementation
+ * @param dateTime ISO 8601 datetime string (without timezone suffix)
+ * @param fromTimeZone Source timezone (typically 'UTC')
  * @param toTimeZone Destination timezone
  * @returns ISO 8601 datetime string in the destination timezone
  */
-export function convertTimezone(dateTime: string, _fromTimeZone: string, toTimeZone: string): string {
+export function convertTimezone(dateTime: string, fromTimeZone: string, toTimeZone: string): string {
   try {
-    // Parse the datetime string
-    const date = new Date(dateTime);
+    // Microsoft Graph returns datetime strings without timezone info (e.g., "2025-12-05T04:00:00")
+    // We need to interpret this datetime as being in the source timezone
+
+    let dateToConvert: Date;
+
+    // If the source timezone is UTC, append 'Z' to parse as UTC
+    // Otherwise, we need to parse it differently
+    if (fromTimeZone === 'UTC') {
+      // Ensure the datetime string is treated as UTC by adding 'Z' if not present
+      const utcDateString = dateTime.endsWith('Z') ? dateTime : dateTime + 'Z';
+      dateToConvert = new Date(utcDateString);
+    } else {
+      // For non-UTC source timezones, we need to be more careful
+      // Parse the datetime string and interpret it as being in the source timezone
+      // This is tricky because JavaScript Date doesn't support parsing in arbitrary timezones
+      // For now, we'll handle the common case (UTC) and fall back to direct parsing
+      dateToConvert = new Date(dateTime);
+    }
 
     // Create a formatter for the target timezone
     const formatter = new Intl.DateTimeFormat('en-US', {
@@ -93,7 +109,7 @@ export function convertTimezone(dateTime: string, _fromTimeZone: string, toTimeZ
     });
 
     // Format the date in the target timezone
-    const parts = formatter.formatToParts(date);
+    const parts = formatter.formatToParts(dateToConvert);
     const values: any = {};
     parts.forEach(part => {
       if (part.type !== 'literal') {
