@@ -385,16 +385,28 @@ export class GraphAuthProvider {
 
           // Try to parse as unencrypted JSON to check if it's valid
           try {
-            JSON.parse(fileContent);
+            const parsed = JSON.parse(fileContent);
+
+            // Check if this is an encrypted envelope that we couldn't decrypt
+            // Encrypted envelopes have: {version: 1, iv: "...", data: "...", authTag: "..."}
+            if (parsed.iv && parsed.data && parsed.authTag) {
+              console.error('[AUTH] ⚠️  Token cache is encrypted but decryption failed');
+              console.error('[AUTH]     This happens when the encryption key changed:');
+              console.error('[AUTH]     - Your machine hostname or username changed');
+              console.error('[AUTH]     - You moved the cache file from another machine');
+              console.error('[AUTH]     - TOKEN_ENCRYPTION_KEY env var changed');
+              console.error('[AUTH]     You will need to re-authenticate. The old cache will be overwritten.');
+              console.error('[AUTH]     To use this cache, restore the original encryption key.');
+              return;
+            }
+
+            // Not encrypted - old unencrypted format
             console.error('[AUTH] Token cache is unencrypted (old format), will re-encrypt on next save');
             decryptedData = fileContent;
           } catch {
-            // File is not valid JSON - likely corrupted or encryption key changed
-            console.error('[AUTH] ⚠️  Token cache decryption failed - this can happen if:');
-            console.error('[AUTH]     - Your machine hostname or username changed');
-            console.error('[AUTH]     - The cache file is corrupted');
-            console.error('[AUTH]     - You moved the cache file from another machine');
-            console.error('[AUTH] Deleting corrupted cache and starting fresh...');
+            // File is not valid JSON - likely corrupted
+            console.error('[AUTH] ⚠️  Token cache file is corrupted (not valid JSON)');
+            console.error('[AUTH]     Deleting corrupted cache and starting fresh...');
 
             // Delete the corrupted cache file
             try {
