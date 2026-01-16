@@ -26,8 +26,16 @@
     "excel",
     "ai"
   ],
-  "author": "",
+  "author": "Steven Hallam",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sahallam/MCP-Office-365.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sahallam/MCP-Office-365/issues"
+  },
+  "homepage": "https://github.com/sahallam/MCP-Office-365#readme",
   "dependencies": {
     "@azure/msal-node": "^2.15.0",
     "@microsoft/microsoft-graph-client": "^3.0.7",
