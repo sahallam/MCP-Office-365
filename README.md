@@ -3,8 +3,11 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue)](https://github.com/sahallam/MCP-Office-365/releases)
 
 A comprehensive [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server for Microsoft Office 365 integration. This server enables AI assistants like Claude to interact with your Office 365 environment, including Outlook, Calendar, OneDrive, SharePoint, Teams, Excel, Word, and OneNote.
+
+> **📋 [View Release Notes for v1.0.0](RELEASE_NOTES.md)** - See what's new in this release!
 
 ## Table of Contents
 
