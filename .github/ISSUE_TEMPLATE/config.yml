@@ -1,0 +1,14 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 📖 Check Documentation First
+    url: https://github.com/sahallam/MCP-Office-365/blob/main/README.md#troubleshooting
+    about: Review documentation and troubleshooting guide before opening an issue.
+  - name: 📋 Read Contribution Guidelines
+    url: https://github.com/sahallam/MCP-Office-365/blob/main/CONTRIBUTING.md
+    about: Understand the contribution policy and monthly review cycle.
+  - name: 🔐 Report Security Vulnerability
+    url: https://github.com/sahallam/MCP-Office-365/security
+    about: Report security issues privately (not through public issues).
+  - name: 🍴 Fork for New Features
+    url: https://github.com/sahallam/MCP-Office-365/fork
+    about: Want new features? Fork this repository instead of requesting them.
