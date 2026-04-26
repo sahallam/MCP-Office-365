@@ -1,0 +1,34 @@
+# CODEOWNERS file for MCP-Office-365
+# This file defines individuals or teams responsible for code in this repository.
+#
+# Each line is a file pattern followed by one or more owners.
+# Order matters - last matching pattern takes precedence.
+#
+# Documentation: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything in the repository
+# Any file not explicitly matched below requires review from the default owner
+* @sahallam
+
+# Security-critical files require explicit review
+/src/auth.ts @sahallam
+/src/security.ts @sahallam
+/src/audit.ts @sahallam
+
+# Configuration files that affect the entire project
+/.env.example @sahallam
+/package.json @sahallam
+/package-lock.json @sahallam
+/tsconfig.json @sahallam
+
+# GitHub configuration and workflows
+/.github/ @sahallam
+
+# Documentation changes (can add more reviewers here if you have doc maintainers)
+*.md @sahallam
+/CONTRIBUTING.md @sahallam
+/README.md @sahallam
+/RELEASE_NOTES.md @sahallam
+
+# License and legal
+/LICENSE @sahallam
