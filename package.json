@@ -1,6 +1,6 @@
 {
   "name": "@office365/mcp-server",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Model Context Protocol (MCP) server for Microsoft Office 365 integration",
   "main": "dist/index.js",
   "type": "module",

@@ -39,6 +39,7 @@ A comprehensive [Model Context Protocol](https://modelcontextprotocol.io) (MCP) 
 - Accept/decline/tentatively accept meetings
 - Find available meeting times
 - Support for online meetings
+- **Automatic timezone conversion**: Calendar events are automatically converted from UTC to your system timezone (macOS, Linux, Windows)
 
 ### OneDrive
 - List files and folders
