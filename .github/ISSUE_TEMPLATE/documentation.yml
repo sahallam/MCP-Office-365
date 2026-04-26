@@ -19,7 +19,6 @@ body:
         - README.md
         - CONTRIBUTING.md
         - RELEASE_NOTES.md
-        - GITHUB_RULESETS.md
         - Code comments
         - Other
     validations:
