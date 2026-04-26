@@ -23,7 +23,9 @@ This release adds comprehensive governance, documentation, and stability improve
 - **Proactive token refresh** (10 minutes before expiry)
 - **Retry logic** for transient network failures with exponential backoff
 - **Improved diagnostics** with detailed expiry time logging
-- **Fixed npm audit vulnerabilities** (0 vulnerabilities remaining)
+- **Fixed 25 security vulnerabilities** via npm audit (reduced from 27 to 2 moderate)
+  - Updated critical dependencies: axios, hono, path-to-regexp, @modelcontextprotocol/sdk, and others
+  - Remaining 2 vulnerabilities are in uuid (dependency of @azure/msal-node) with no fix available
 
 #### Repository Cleanup
 - Removed internal documentation files not needed by public users
