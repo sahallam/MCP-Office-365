@@ -137,8 +137,15 @@ export class AuditLogger {
       fs.appendFileSync(this.logPath, logLine, { mode: 0o600 });
 
       // Also log to console for debugging (if enabled)
+      // Only log non-sensitive metadata to console
       if (process.env.DEBUG_AUDIT === 'true') {
-        console.log('[AUDIT]', logLine.trim());
+        console.log('[AUDIT]', JSON.stringify({
+          timestamp: logEntry.timestamp,
+          eventType: logEntry.eventType,
+          action: logEntry.action,
+          resource: logEntry.resource,
+          success: logEntry.success
+        }));
       }
     } catch (error) {
       // Don't throw - we don't want audit logging to break the application
