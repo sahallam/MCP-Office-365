@@ -39,11 +39,14 @@ export function escapeHtml(text: string): string {
 }
 
 /**
- * Sanitize HTML content allowing only safe tags and attributes
+ * Sanitize HTML content by escaping all HTML tags and special characters
  *
- * WARNING: This is a basic implementation suitable for development and testing.
- * For production environments with untrusted user input, consider using a
- * comprehensive HTML sanitization library like DOMPurify:
+ * SECURITY WARNING: This function is only suitable for displaying content from
+ * TRUSTED sources (like Office 365 emails/documents). It converts HTML to plain
+ * text by escaping all HTML tags.
+ *
+ * For production environments requiring HTML display from untrusted user input,
+ * use a comprehensive HTML sanitization library like DOMPurify:
  *
  * Installation: npm install dompurify @types/dompurify
  * Usage: import DOMPurify from 'dompurify';
@@ -51,21 +54,17 @@ export function escapeHtml(text: string): string {
  *
  * @param html - The HTML string to sanitize
  * @param _allowedTags - Reserved for future use with allowlist-based sanitization
- * @returns Sanitized HTML string with dangerous elements removed
+ * @returns Sanitized string with all HTML escaped
  */
 export function sanitizeHtmlContent(html: string, _allowedTags: string[] = []): string {
   if (!html || typeof html !== 'string') {
     return '';
   }
 
-  // Remove script tags, event handlers, and javascript: URLs
-  // Note: _allowedTags parameter is available for future enhancement
-  let sanitized = html
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
-    .replace(/javascript:/gi, '');
-
-  return sanitized;
+  // For security, we escape all HTML rather than trying to filter specific patterns
+  // This prevents XSS while preserving the text content for display
+  // Note: _allowedTags parameter is available for future enhancement with DOMPurify
+  return escapeHtml(html);
 }
 
 /**

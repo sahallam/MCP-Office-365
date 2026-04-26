@@ -18,14 +18,19 @@ This release adds comprehensive governance, documentation, and stability improve
 - **Monthly review cycle** for sustainable maintenance (1st of each month)
 - **Updated README** with professional badges and clear contribution expectations
 
-#### Authentication & Stability
+#### Security & Stability
+- **Fixed 6 code scanning security alerts** (5 high, 1 medium):
+  - Sanitized audit log console output to prevent exposure of sensitive data
+  - Replaced unsafe HTML filtering regex with comprehensive HTML escaping
+  - Fixed incomplete URL scheme check vulnerabilities
+  - Replaced shell command with direct file read for timezone detection
+- **Fixed 25 dependency vulnerabilities** via npm audit (reduced from 27 to 2 moderate)
+  - Updated critical dependencies: axios, hono, path-to-regexp, @modelcontextprotocol/sdk, and others
+  - Remaining 2 vulnerabilities are in uuid (dependency of @azure/msal-node) with no fix available
 - **Enhanced token persistence** with 3-month rolling refresh
 - **Proactive token refresh** (10 minutes before expiry)
 - **Retry logic** for transient network failures with exponential backoff
 - **Improved diagnostics** with detailed expiry time logging
-- **Fixed 25 security vulnerabilities** via npm audit (reduced from 27 to 2 moderate)
-  - Updated critical dependencies: axios, hono, path-to-regexp, @modelcontextprotocol/sdk, and others
-  - Remaining 2 vulnerabilities are in uuid (dependency of @azure/msal-node) with no fix available
 
 #### Repository Cleanup
 - Removed internal documentation files not needed by public users

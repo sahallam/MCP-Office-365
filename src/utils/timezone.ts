@@ -3,6 +3,7 @@
  */
 
 import { execSync } from 'child_process';
+import * as fs from 'fs';
 
 /**
  * Detect the system timezone using various methods depending on the platform
@@ -44,7 +45,7 @@ export function detectSystemTimezone(): string {
     // For Linux: Try reading /etc/timezone file
     if (process.platform === 'linux') {
       try {
-        const timezone = execSync('cat /etc/timezone', { encoding: 'utf-8' }).trim();
+        const timezone = fs.readFileSync('/etc/timezone', 'utf-8').trim();
         if (timezone) {
           return timezone;
         }
