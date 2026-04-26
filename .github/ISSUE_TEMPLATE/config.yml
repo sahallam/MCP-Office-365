@@ -1,14 +1,14 @@
-blank_issues_enabled: false
+blank_issues_enabled: true
 contact_links:
-  - name: ⚠️ Read Before Opening an Issue
-    url: https://github.com/sahallam/MCP-Office-365/blob/main/CONTRIBUTING.md
-    about: This repository has a limited contribution policy. Please read first.
-  - name: 📖 Documentation & Troubleshooting
+  - name: 📖 Check Documentation First
     url: https://github.com/sahallam/MCP-Office-365/blob/main/README.md#troubleshooting
-    about: Check the comprehensive documentation and troubleshooting guide.
-  - name: 🔐 Security Vulnerabilities
+    about: Review documentation and troubleshooting guide before opening an issue.
+  - name: 📋 Read Contribution Guidelines
+    url: https://github.com/sahallam/MCP-Office-365/blob/main/CONTRIBUTING.md
+    about: Understand the contribution policy and monthly review cycle.
+  - name: 🔐 Report Security Vulnerability
     url: https://github.com/sahallam/MCP-Office-365/security
-    about: Report security issues privately, not through public issues.
-  - name: 🍴 Fork This Repository
+    about: Report security issues privately (not through public issues).
+  - name: 🍴 Fork for New Features
     url: https://github.com/sahallam/MCP-Office-365/fork
-    about: Want to add features? Fork this repository and maintain your own version.
+    about: Want new features? Fork this repository instead of requesting them.

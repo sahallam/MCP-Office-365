@@ -1,30 +1,165 @@
 # Contributing to Office365 MCP Server
 
-## ⚠️ Limited Contribution Policy
+Thank you for your interest in contributing! This project welcomes **selective contributions** with clear guidelines and realistic expectations.
 
-**This is a personal project released for public use, not a community-driven project.**
+## 📋 Contribution Policy Summary
 
-This repository is **not actively seeking contributions**. Issues and pull requests are not monitored regularly.
+**Monthly Review Cycle:** Issues and PRs are reviewed on the **1st of each month**
 
-### What This Means
+**We Accept:**
+- ✅ Bug fixes (with tests and reproduction steps)
+- ✅ Security fixes (reviewed with priority)
+- ✅ Documentation corrections
 
-**For Users:**
-- ✅ Use the software freely (MIT License)
-- ✅ Report security issues privately (see below)
-- ✅ Read comprehensive documentation
-- ⚠️ Limited support available
+**Please Fork Instead:**
+- 🍴 New features (additional services, tools)
+- 🍴 Enhancements and optimizations
+- 🍴 Refactoring without bug fix
+- 🍴 Dependency updates (unless security-critical)
 
-**For Developers:**
-- ✅ Fork and modify for your needs
-- ✅ Create your own maintained version
-- ✅ Share your fork with others
-- ❌ Pull requests not actively reviewed
-- ❌ Feature requests not accepted
-- ❌ Issues not actively monitored
+**Response Time:**
+- Issues: Reviewed monthly, no guaranteed response
+- PRs: Reviewed monthly, no guaranteed merge
+- Need faster? Fork it!
 
 ---
 
-## 🍴 Recommended Approach: Fork This Repository
+## 🐛 Reporting Bugs
+
+**Before opening an issue:**
+1. Check [existing issues](https://github.com/sahallam/MCP-Office-365/issues)
+2. Review the [Troubleshooting Guide](README.md#troubleshooting)
+3. Try the [latest release](https://github.com/sahallam/MCP-Office-365/releases)
+
+**When opening an issue, include:**
+- Clear, descriptive title
+- Detailed description of the problem
+- Steps to reproduce (be specific!)
+- Expected behavior vs actual behavior
+- Your environment:
+  - Operating system and version
+  - Node.js version (`node --version`)
+  - Package version
+  - Authentication mode (delegated or app-only)
+- Error messages or logs (if applicable)
+- Screenshots (if relevant)
+
+**Good example:**
+```
+Title: "Authentication fails with AADSTS700082 after 90 days"
+
+Description:
+After using the connector successfully for 90 days, authentication suddenly fails
+with error AADSTS700082 (refresh token expired).
+
+Steps to reproduce:
+1. Set up delegated auth with .env configuration
+2. Authenticate successfully via device code
+3. Wait 90 days without using the connector
+4. Try to use any tool (e.g., outlook_list_emails)
+
+Expected: Automatic re-authentication prompt
+Actual: Error "Authentication failed: AADSTS700082"
+
+Environment:
+- OS: macOS 14.2
+- Node.js: v20.10.0
+- Package: v1.0.0
+- Auth mode: delegated
+
+Error log:
+[Paste error here]
+```
+
+---
+
+## 🔧 Submitting Pull Requests
+
+### Before You Start
+
+1. **Check if it's accepted** - Review the policy above
+2. **Open an issue first** - Discuss the bug/fix before coding
+3. **Keep it focused** - One bug fix per PR
+4. **Read the code standards** - Follow existing patterns
+
+### Accepted PRs: Bug Fixes
+
+**Requirements:**
+- [ ] Fixes a specific bug (not enhancement)
+- [ ] Includes reproduction steps
+- [ ] Adds test case or verification steps
+- [ ] Updates documentation if needed
+- [ ] Follows existing code style
+- [ ] No breaking changes
+- [ ] Commits are clear and atomic
+
+**Process:**
+1. Fork the repository
+2. Create a branch: `bugfix/issue-123-short-description`
+3. Write failing test that reproduces the bug
+4. Fix the bug
+5. Ensure test passes
+6. Update documentation if needed
+7. Push to your fork
+8. Open PR with description linking to issue
+
+### Accepted PRs: Documentation
+
+**Requirements:**
+- [ ] Fixes incorrect information
+- [ ] Improves clarity
+- [ ] Adds missing information
+- [ ] Follows existing documentation style
+
+**Minor doc fixes:** Can skip the issue, just submit PR
+
+---
+
+## 💻 Code Standards for Bug Fixes
+
+When submitting bug fix PRs, follow these standards:
+
+### TypeScript
+- Use strict type safety (no implicit `any`)
+- All functions have explicit return types
+- Follow existing code patterns in the repository
+
+### Security
+- Validate all user inputs before processing
+- Use validation functions in `src/security.ts`
+- Follow the input validation pattern:
+  ```typescript
+  async myFunction(resourceId: string): Promise<Result> {
+    // 1. Validate inputs
+    validateResourceId(resourceId, 'resource');
+    
+    // 2. Perform operation
+    const result = await this.graphClient.api(`/path/${resourceId}`).get();
+    
+    // 3. Return result
+    return result;
+  }
+  ```
+
+### Error Handling
+- Don't expose sensitive information in error messages
+- Use centralized error handling in `index.ts`
+- Test error paths
+
+### Documentation
+- Update README.md if behavior changes
+- Add inline comments only when "why" is non-obvious
+- Don't document what code obviously does
+
+### Testing
+- Build successfully: `npm run build`
+- No TypeScript errors
+- Manual testing of the bug fix
+- Include test steps in PR description
+
+---
+
+## 🍴 Want to Add Features? Fork This Repository!
 
 If you want to add features, fix bugs, or customize this project:
 
