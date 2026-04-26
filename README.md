@@ -9,69 +9,8 @@ A comprehensive [Model Context Protocol](https://modelcontextprotocol.io) (MCP) 
 
 > **📋 [View Release Notes for v1.0.0](RELEASE_NOTES.md)** - See what's new in this release!
 
----
-
-## 📢 Project Status & Contribution Policy
-
-**This project welcomes selective contributions with realistic expectations.**
-
-### ✅ What's Welcome
-
-**Bug Reports:**
-- Issues for broken functionality or unexpected behavior
-- Security vulnerabilities (report privately - see [SECURITY.md](.github/SECURITY.md))
-- Documentation errors or unclear instructions
-
-**Pull Requests (Accepted):**
-- Bug fixes with reproduction steps and tests
-- Security fixes (priority review)
-- Documentation corrections and improvements
-
-**Pull Requests (Not Accepted - Please Fork):**
-- New features (additional Microsoft services, new tools)
-- Enhancements and optimizations
-- Refactoring without associated bug fix
-- Dependency updates (unless security-critical)
-
-### ⏰ Response Time Expectations
-
-**Be realistic:**
-- Issues reviewed **monthly** (1st of each month)
-- PRs reviewed **monthly** (1st of each month)
-- No guaranteed response time
-- No guaranteed merge even if approved
-
-**Need it faster?** Fork the repository and implement it yourself! The MIT License encourages this.
-
-### 🍴 Forks Still Encouraged
-
-For new features or major changes:
-1. **Fork this repository** to your account
-2. **Implement your changes** at your own pace
-3. **Share your fork** with others who need those features
-4. **No PR required** - maintain independently
-
-Forks are often faster than waiting for PR review!
-
-### 🎯 How to Use This Project
-
-**For Users:**
-- ✅ Download the [latest release](https://github.com/sahallam/MCP-Office-365/releases)
-- ✅ Read comprehensive [documentation](#features) below
-- ✅ Check [troubleshooting guide](#troubleshooting) for common issues
-- ✅ Use freely under MIT License
-
-**For Contributors:**
-- ✅ Read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting
-- ✅ Check existing issues before creating new ones
-- ✅ Be patient with review timeline
-- ✅ Consider forking for features
-
----
-
 ## Table of Contents
 
-- [Project Status & Usage Policy](#-project-status--usage-policy)
 - [Features](#features)
 - [Prerequisites](#prerequisites)
 - [Authentication Modes](#authentication-modes)
@@ -84,7 +23,6 @@ Forks are often faster than waiting for PR review!
 - [Security Architecture](#security-architecture)
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
-- [Support](#support)
 - [License](#license)
 
 ## Features
@@ -840,31 +778,13 @@ This server implements enterprise-grade security following OWASP Top 10 (2021) g
 
 ## Contributing
 
-**Selective contributions welcome!** This project accepts bug fixes and critical improvements on a monthly review cycle.
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines on:
 
-### Quick Guidelines
-
-**Before contributing:**
-1. Read [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines
-2. Check existing [issues](https://github.com/sahallam/MCP-Office-365/issues) and [PRs](https://github.com/sahallam/MCP-Office-365/pulls)
-3. Understand the [monthly review schedule](#-response-time-expectations)
-
-**Accepted contributions:**
-- 🐛 Bug fixes (with reproduction steps)
-- 🔒 Security fixes (priority review)
-- 📖 Documentation improvements
-
-**Please fork instead:**
-- ✨ New features
-- ⚡ Performance enhancements
-- 🔨 Refactoring
-- 📦 Dependency updates
-
-### Monthly Review Cycle
-
-Issues and PRs are reviewed on the **1st of each month**. If you need faster resolution, forking is encouraged!
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for complete contribution guidelines, code standards, and forking instructions.
+- Setting up your development environment
+- Code style and best practices
+- Security guidelines
+- Pull request process
+- Reporting bugs and security vulnerabilities
 
 ## License
 
@@ -878,36 +798,10 @@ MIT License - see LICENSE file for details
 
 ## Support
 
-### Self-Service Resources (Start Here)
-
-Before opening an issue, please check:
-- 📖 **This README** - Comprehensive setup and usage guide
-- 📋 **[Release Notes](RELEASE_NOTES.md)** - Version history and changes
-- 🔧 **[Troubleshooting](#troubleshooting)** - Common issues and solutions
-- 🏗️ **[Architecture](#architecture)** - Understanding the codebase
-- 🔐 **[Security Architecture](#security-architecture)** - Security features
-
-### Getting Help
-
-**For bugs or issues:**
-1. Check [existing issues](https://github.com/sahallam/MCP-Office-365/issues)
-2. If new, [open an issue](https://github.com/sahallam/MCP-Office-365/issues/new) with:
-   - Clear description of the problem
-   - Steps to reproduce
-   - Expected vs actual behavior
-   - Your environment (OS, Node.js version, etc.)
-
-**Response time:** Issues reviewed monthly (1st of each month)
-
-**For questions:**
-- Check the documentation above
-- Review [Microsoft Graph API docs](https://developer.microsoft.com/en-us/graph)
-- Check [MCP Protocol specification](https://modelcontextprotocol.io)
-
-### Community Resources
-
-- [Model Context Protocol Servers](https://github.com/modelcontextprotocol/servers) - Other MCP implementations
-- Community forks may have additional features (search GitHub)
+For issues and questions:
+- [Open an issue on GitHub](https://github.com/sahallam/MCP-Office-365/issues)
+- Check [Microsoft Graph API documentation](https://developer.microsoft.com/en-us/graph)
+- Review [MCP protocol specification](https://modelcontextprotocol.io)
 
 ## Acknowledgments
 
