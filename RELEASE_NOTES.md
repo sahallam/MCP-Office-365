@@ -1,13 +1,52 @@
-# Release Notes - Office365 MCP Server v1.0.0
+# Release Notes - Office365 MCP Server
 
-**Release Date:** April 24, 2026  
+## v1.1.0 - Public Release with Governance & Stability Improvements
+
+**Release Date:** April 26, 2026  
 **Status:** General Availability (GA)
 
-We're excited to announce the first public release of the Office365 MCP Server - a comprehensive Model Context Protocol (MCP) server that enables AI assistants like Claude to seamlessly interact with your Microsoft Office 365 environment.
+This release adds comprehensive governance, documentation, and stability improvements to make the project sustainable for public consumption.
+
+### 🎯 What's New in v1.1.0
+
+#### Governance & Documentation
+- **Comprehensive contribution guidelines** (CONTRIBUTING.md) with selective contributions policy
+- **Security vulnerability reporting** process (SECURITY.md)
+- **GitHub issue templates** for bugs and documentation improvements
+- **Pull request template** with type-specific checklists
+- **CODEOWNERS** for automatic review requests
+- **Monthly review cycle** for sustainable maintenance (1st of each month)
+- **Updated README** with professional badges and clear contribution expectations
+
+#### Authentication & Stability
+- **Enhanced token persistence** with 3-month rolling refresh
+- **Proactive token refresh** (10 minutes before expiry)
+- **Retry logic** for transient network failures with exponential backoff
+- **Improved diagnostics** with detailed expiry time logging
+- **Fixed npm audit vulnerabilities** (0 vulnerabilities remaining)
+
+#### Repository Cleanup
+- Removed internal documentation files not needed by public users
+- Removed paid-tier GitHub features documentation
+- Enhanced .gitignore for audit logs and token cache
+- Updated package.json with author and repository information
+
+#### Configuration Updates
+- Updated TypeScript moduleResolution to "bundler" (modern standard)
+- Added TOKEN_ENCRYPTION_KEY documentation in .env.example
+- Improved error handling and logging throughout
+
+### 🔄 Upgrade from v1.0
+
+No breaking changes. Simply pull the latest version and continue using as before. If you experience authentication issues, review the updated [Troubleshooting Guide](README.md#troubleshooting).
 
 ---
 
-## 🎉 What's New in v1.0
+## v1.0.0 - Initial Public Release
+
+**Release Date:** April 24, 2026
+
+### 🎉 What's New in v1.0
 
 ### Comprehensive Office 365 Integration
 
