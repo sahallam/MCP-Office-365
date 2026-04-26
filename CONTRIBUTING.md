@@ -1,6 +1,92 @@
 # Contributing to Office365 MCP Server
 
-Thank you for your interest in contributing to the Office365 MCP Server! This document provides guidelines and instructions for contributing.
+## ⚠️ Limited Contribution Policy
+
+**This is a personal project released for public use, not a community-driven project.**
+
+This repository is **not actively seeking contributions**. Issues and pull requests are not monitored regularly.
+
+### What This Means
+
+**For Users:**
+- ✅ Use the software freely (MIT License)
+- ✅ Report security issues privately (see below)
+- ✅ Read comprehensive documentation
+- ⚠️ Limited support available
+
+**For Developers:**
+- ✅ Fork and modify for your needs
+- ✅ Create your own maintained version
+- ✅ Share your fork with others
+- ❌ Pull requests not actively reviewed
+- ❌ Feature requests not accepted
+- ❌ Issues not actively monitored
+
+---
+
+## 🍴 Recommended Approach: Fork This Repository
+
+If you want to add features, fix bugs, or customize this project:
+
+### 1. Fork the Repository
+
+Click the "Fork" button at the top of this repository to create your own copy.
+
+### 2. Make Your Changes
+
+```bash
+# Clone your fork
+git clone https://github.com/YOUR-USERNAME/MCP-Office-365.git
+cd MCP-Office-365
+
+# Create a branch
+git checkout -b feature/your-feature-name
+
+# Make your changes
+# ... edit files ...
+
+# Commit and push
+git add .
+git commit -m "Add your feature"
+git push origin feature/your-feature-name
+```
+
+### 3. Maintain Your Fork
+
+- Keep your fork public so others can benefit
+- Update the README to indicate it's a fork with additional features
+- Maintain it independently at your own pace
+- Share it with others who might find it useful
+
+### 4. Credit Original Work
+
+The MIT License requires you to include the original copyright notice. Keep the LICENSE file intact.
+
+---
+
+## 🔐 Security Vulnerabilities
+
+**If you discover a security vulnerability, please report it privately.**
+
+- **Do not** open a public issue
+- **Do not** submit a pull request
+- **Email:** [Contact via GitHub profile or repository maintainer]
+
+Include:
+- Description of the vulnerability
+- Steps to reproduce
+- Potential impact
+- Suggested fix (if you have one)
+
+Security issues will be addressed with priority.
+
+---
+
+## 📚 Development Resources (For Your Fork)
+
+If you've forked this repository and want to develop it further, here are some guidelines from the original implementation.
+
+Thank you for your interest in the Office365 MCP Server!
 
 ## Getting Started
 
