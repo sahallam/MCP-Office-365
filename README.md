@@ -1,8 +1,26 @@
 # Office365 MCP Server
 
-A comprehensive [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server for Microsoft Office 365 integration. This server enables AI assistants like Claude to interact with your Office 365 environment, including Outlook, Calendar, OneDrive, SharePoint, Teams, Excel, Word, and OneNote. 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
 
-This code was developed by Claude Code.
+A comprehensive [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server for Microsoft Office 365 integration. This server enables AI assistants like Claude to interact with your Office 365 environment, including Outlook, Calendar, OneDrive, SharePoint, Teams, Excel, Word, and OneNote.
+
+## Table of Contents
+
+- [Features](#features)
+- [Prerequisites](#prerequisites)
+- [Authentication Modes](#authentication-modes)
+- [Setup](#setup)
+- [Usage](#usage)
+- [Available Tools](#available-tools)
+- [Example Prompts](#example-prompts)
+- [Architecture](#architecture)
+- [Development](#development)
+- [Security Architecture](#security-architecture)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [License](#license)
 
 ## Features
 
@@ -233,8 +251,8 @@ After adding permissions, click **Grant admin consent** for your organization.
 
 ```bash
 # Clone the repository
-git clone https://github.com/sahallam/office365-mcp-server.git
-cd office365-mcp-server
+git clone https://github.com/sahallam/MCP-Office-365.git
+cd MCP-Office-365
 
 # Install dependencies
 npm install
@@ -756,13 +774,13 @@ This server implements enterprise-grade security following OWASP Top 10 (2021) g
 
 ## Contributing
 
-Contributions are welcome! Please:
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines on:
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+- Setting up your development environment
+- Code style and best practices
+- Security guidelines
+- Pull request process
+- Reporting bugs and security vulnerabilities
 
 ## License
 
@@ -777,13 +795,14 @@ MIT License - see LICENSE file for details
 ## Support
 
 For issues and questions:
-- Open an issue on GitHub
-- Check Microsoft Graph API documentation
-- Review MCP protocol specification
+- [Open an issue on GitHub](https://github.com/sahallam/MCP-Office-365/issues)
+- Check [Microsoft Graph API documentation](https://developer.microsoft.com/en-us/graph)
+- Review [MCP protocol specification](https://modelcontextprotocol.io)
 
 ## Acknowledgments
 
-- Developed by Claude Code, prompted by Steven Hallam.
 - Built with the [Model Context Protocol SDK](https://github.com/modelcontextprotocol)
-- Uses [Microsoft Graph API](https://developer.microsoft.com/en-us/graph)
+- Powered by [Microsoft Graph API](https://developer.microsoft.com/en-us/graph)
 - Inspired by the [Google Cloud MCP Server](https://github.com/googleapis/gcloud-mcp)
+
+Developed with Claude Code by Steven Hallam.

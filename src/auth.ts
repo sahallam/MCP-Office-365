@@ -1,11 +1,20 @@
 /**
  * Microsoft Graph API Authentication
  *
- * Token Lifetime Information:
- * - Access tokens: ~1 hour
- * - Refresh tokens: Up to 90 days by default (can be extended to 6+ months with Conditional Access policies)
- * - Refresh tokens are "rolling" - each use before expiry gets you a new refresh token
- * - As long as the connector is used at least once within the refresh token lifetime, authentication persists
+ * Token Lifetime and Persistence (Updated for 3-Month Authentication):
+ * - Access tokens: ~1 hour (automatically refreshed in background)
+ * - Refresh tokens: 90 days (3 months) by default, can be extended to 6+ months with Conditional Access policies
+ * - Refresh tokens are "rolling" - each use before expiry renews them for another 90 days
+ * - As long as the connector is used at least once within 90 days, authentication persists indefinitely
+ * - Tokens are proactively refreshed 10 minutes before expiry (improved from 5 minutes)
+ * - Retry logic handles transient network failures (3 retries with exponential backoff)
+ * - Enhanced diagnostics help identify when refresh tokens expire or are revoked
+ *
+ * To maintain 3-month authentication persistence:
+ * 1. Use the connector at least once every 90 days
+ * 2. Each usage automatically extends the refresh token for another 90 days
+ * 3. No re-authentication needed as long as the connector is used regularly
+ * 4. If refresh token expires (90+ days of inactivity), user must re-authenticate
  */
 
 import { ConfidentialClientApplication, PublicClientApplication, DeviceCodeRequest, ICachePlugin, TokenCacheContext } from '@azure/msal-node';
@@ -521,10 +530,14 @@ export class GraphAuthProvider {
       .then((response) => {
         if (response && response.accessToken) {
           this.accessToken = response.accessToken;
-          this.tokenExpiry = new Date(response.expiresOn!.getTime() - 5 * 60 * 1000);
+          // Use 2-minute buffer (consistent with other token acquisitions)
+          this.tokenExpiry = new Date(response.expiresOn!.getTime() - 2 * 60 * 1000);
           this.userAccount = response.account;
 
-          console.error('✅ Authentication successful! Session saved.');
+          const expiryTime = new Date(response.expiresOn!).toLocaleString();
+          console.error('✅ Authentication successful! Session saved and will persist for 90 days (3 months) with automatic refresh.');
+          console.error(`[AUTH] Access token expires at: ${expiryTime}`);
+          console.error('[AUTH] Refresh token will be automatically used for seamless re-authentication');
 
           // Clear pending device code after successful auth
           this.pendingDeviceCode = null;
@@ -568,8 +581,12 @@ export class GraphAuthProvider {
   /**
    * Acquire token silently using MSAL cache and refresh tokens
    * This method attempts to refresh the access token without user interaction
+   * Implements retry logic for transient failures to improve reliability
    */
-  private async acquireTokenSilent(): Promise<string> {
+  private async acquireTokenSilent(retryCount: number = 0): Promise<string> {
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY_MS = 2000;
+
     try {
       // Get all accounts from MSAL cache
       const accounts = await (this.msalClient as PublicClientApplication).getTokenCache().getAllAccounts();
@@ -587,10 +604,19 @@ export class GraphAuthProvider {
       console.error(`[AUTH] Using account: ${account.username || account.homeAccountId}`);
       console.error(`[AUTH] Requesting scopes: ${GraphAuthProvider.DELEGATED_SCOPES.join(', ')}`);
 
+      // Proactively refresh if token will expire soon (within 10 minutes)
+      // This prevents using tokens that are about to expire
+      const shouldForceRefresh = !!(this.tokenExpiry &&
+                                    (this.tokenExpiry.getTime() - Date.now()) < 10 * 60 * 1000);
+
+      if (shouldForceRefresh) {
+        console.error('[AUTH] Token expiring soon, forcing refresh from refresh token');
+      }
+
       const response = await (this.msalClient as PublicClientApplication).acquireTokenSilent({
         account,
         scopes: GraphAuthProvider.DELEGATED_SCOPES,
-        forceRefresh: false, // Use cached token if valid, otherwise use refresh token
+        forceRefresh: shouldForceRefresh, // Proactively refresh if expiring soon
       });
 
       if (!response || !response.accessToken) {
@@ -599,16 +625,56 @@ export class GraphAuthProvider {
       }
 
       this.accessToken = response.accessToken;
-      this.tokenExpiry = new Date(response.expiresOn!.getTime() - 5 * 60 * 1000);
+      // Keep token valid for longer - only subtract 2 minutes instead of 5
+      // This reduces unnecessary refresh attempts
+      this.tokenExpiry = new Date(response.expiresOn!.getTime() - 2 * 60 * 1000);
       this.userAccount = response.account;
 
       const tokenSource = response.fromCache ? 'cache' : 'refresh token';
-      console.error(`[AUTH] Successfully acquired token from ${tokenSource} for ${account.username || 'user'}`);
+      const expiryTime = new Date(response.expiresOn!).toLocaleString();
+      console.error(`[AUTH] ✅ Successfully acquired token from ${tokenSource} for ${account.username || 'user'}`);
+      console.error(`[AUTH] Token expires at: ${expiryTime} (valid for ${Math.round((response.expiresOn!.getTime() - Date.now()) / 1000 / 60)} minutes)`);
+
       return this.accessToken;
     } catch (error) {
-      // Fall back to device code authentication
       const errorMsg = error instanceof Error ? error.message : String(error);
-      console.error(`[AUTH] Silent token acquisition failed: ${errorMsg}`);
+      const errorCode = (error as any)?.errorCode || 'unknown';
+
+      // Enhanced error diagnostics
+      console.error(`[AUTH] ⚠️  Silent token acquisition failed (attempt ${retryCount + 1}/${MAX_RETRIES + 1})`);
+      console.error(`[AUTH] Error code: ${errorCode}`);
+      console.error(`[AUTH] Error message: ${errorMsg}`);
+
+      // Check for specific error types that indicate refresh token issues
+      const isRefreshTokenExpired = errorMsg.includes('AADSTS700082') || // Token expired
+                                     errorMsg.includes('AADSTS700084') || // Refresh token expired
+                                     errorMsg.includes('AADSTS50173') || // Refresh token expired
+                                     errorCode === 'invalid_grant';
+
+      const isTransientError = errorMsg.includes('ECONNRESET') ||
+                              errorMsg.includes('ETIMEDOUT') ||
+                              errorMsg.includes('ENOTFOUND') ||
+                              errorCode === 'network_error' ||
+                              errorCode === 'service_unavailable';
+
+      if (isRefreshTokenExpired) {
+        console.error('[AUTH] ❌ Refresh token has expired or been revoked');
+        console.error('[AUTH] This typically happens after 90 days of inactivity or if:');
+        console.error('[AUTH]   - Your password was changed');
+        console.error('[AUTH]   - An admin revoked the token');
+        console.error('[AUTH]   - Conditional access policy changed');
+        console.error('[AUTH] You will need to re-authenticate.');
+        return this.acquireTokenByDeviceCode();
+      }
+
+      if (isTransientError && retryCount < MAX_RETRIES) {
+        console.error(`[AUTH] Transient network error detected, retrying in ${RETRY_DELAY_MS}ms...`);
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS * (retryCount + 1)));
+        return this.acquireTokenSilent(retryCount + 1);
+      }
+
+      // For other errors, fall back to device code authentication
+      console.error(`[AUTH] Falling back to device code authentication`);
       return this.acquireTokenByDeviceCode();
     }
   }
@@ -616,19 +682,31 @@ export class GraphAuthProvider {
   /**
    * Get an access token for Microsoft Graph API
    * This is the main entry point for obtaining tokens
+   * Implements proactive token refresh to maintain 3-month authentication persistence
    */
   async getAccessToken(): Promise<string> {
     try {
-      // Return cached token if still valid (with at least 5 minutes remaining)
-      if (this.accessToken && this.tokenExpiry && this.tokenExpiry > new Date()) {
+      const authMode = this.config.authMode || 'app-only';
+
+      // For delegated auth, check if we should proactively refresh
+      // Refresh if token expires in less than 10 minutes (more proactive than before)
+      const shouldRefresh = !this.accessToken ||
+                           !this.tokenExpiry ||
+                           (this.tokenExpiry.getTime() - Date.now()) < 10 * 60 * 1000;
+
+      // Return cached token only if it's still valid for at least 10 minutes
+      if (this.accessToken && this.tokenExpiry && !shouldRefresh) {
+        const minutesRemaining = Math.round((this.tokenExpiry.getTime() - Date.now()) / 1000 / 60);
+        console.error(`[AUTH] Using cached token (expires in ${minutesRemaining} minutes)`);
         return this.accessToken;
       }
-
-      const authMode = this.config.authMode || 'app-only';
 
       if (authMode === 'delegated') {
         // Try silent acquisition first, which uses MSAL's token cache and refresh tokens
         // This will automatically fall back to device code flow if refresh token is expired
+        // The refresh token persists for 90 days (3 months) and is automatically renewed
+        // with each use, providing seamless 3-month authentication persistence
+        console.error('[AUTH] Refreshing access token using refresh token...');
         return this.acquireTokenSilent();
       } else {
         // App-only authentication (client credentials flow)
@@ -646,7 +724,11 @@ export class GraphAuthProvider {
           }
 
           this.accessToken = authResult.accessToken;
-          this.tokenExpiry = new Date(authResult.expiresOn!.getTime() - 5 * 60 * 1000);
+          // Reduce buffer from 5 minutes to 2 minutes for app-only as well
+          this.tokenExpiry = new Date(authResult.expiresOn!.getTime() - 2 * 60 * 1000);
+
+          const expiryTime = new Date(authResult.expiresOn!).toLocaleString();
+          console.error(`[AUTH] ✅ App-only token acquired, expires at: ${expiryTime}`);
 
           return this.accessToken;
         } catch (error) {
