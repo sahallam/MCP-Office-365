@@ -5,87 +5,13 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
 [![Version](https://img.shields.io/badge/version-1.1.0-blue)](https://github.com/sahallam/MCP-Office-365/releases)
 
-A comprehensive [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server for Microsoft Office 365 integration. This server enables AI assistants like Claude to interact with your Office 365 environment, including Outlook, Calendar, OneDrive, SharePoint, Teams, Excel, Word, and OneNote.
+MCP server for Microsoft Office 365 integration. Enables AI assistants like Claude to interact with Outlook, Calendar, OneDrive, SharePoint, Teams, Excel, Word, and OneNote.
 
-> **📋 [View Release Notes for v1.1.0](RELEASE_NOTES.md)** - See what's new in this release!
+## Contributing
 
----
-
-## 📢 Project Status & Contribution Policy
-
-**This project welcomes selective contributions with realistic expectations.**
-
-### ✅ What's Welcome
-
-**Bug Reports:**
-- Issues for broken functionality or unexpected behavior
-- Security vulnerabilities (report privately - see [SECURITY.md](.github/SECURITY.md))
-- Documentation errors or unclear instructions
-
-**Pull Requests (Accepted):**
-- Bug fixes with reproduction steps and tests
-- Security fixes (priority review)
-- Documentation corrections and improvements
-
-**Pull Requests (Not Accepted - Please Fork):**
-- New features (additional Microsoft services, new tools)
-- Enhancements and optimizations
-- Refactoring without associated bug fix
-- Dependency updates (unless security-critical)
-
-### ⏰ Response Time Expectations
-
-**Be realistic:**
-- Issues reviewed **monthly** (1st of each month)
-- PRs reviewed **monthly** (1st of each month)
-- No guaranteed response time
-- No guaranteed merge even if approved
-
-**Need it faster?** Fork the repository and implement it yourself! The MIT License encourages this.
-
-### 🍴 Forks Still Encouraged
-
-For new features or major changes:
-1. **Fork this repository** to your account
-2. **Implement your changes** at your own pace
-3. **Share your fork** with others who need those features
-4. **No PR required** - maintain independently
-
-Forks are often faster than waiting for PR review!
-
-### 🎯 How to Use This Project
-
-**For Users:**
-- ✅ Download the [latest release](https://github.com/sahallam/MCP-Office-365/releases)
-- ✅ Read comprehensive [documentation](#features) below
-- ✅ Check [troubleshooting guide](#troubleshooting) for common issues
-- ✅ Use freely under MIT License
-
-**For Contributors:**
-- ✅ Read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting
-- ✅ Check existing issues before creating new ones
-- ✅ Be patient with review timeline
-- ✅ Consider forking for features
+Bug fixes and security issues welcome. Features: please fork. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
-
-## Table of Contents
-
-- [Project Status & Usage Policy](#-project-status--usage-policy)
-- [Features](#features)
-- [Prerequisites](#prerequisites)
-- [Authentication Modes](#authentication-modes)
-- [Setup](#setup)
-- [Usage](#usage)
-- [Available Tools](#available-tools)
-- [Example Prompts](#example-prompts)
-- [Architecture](#architecture)
-- [Development](#development)
-- [Security Architecture](#security-architecture)
-- [Troubleshooting](#troubleshooting)
-- [Contributing](#contributing)
-- [Support](#support)
-- [License](#license)
 
 ## Features
 
@@ -636,85 +562,18 @@ The codebase is organized into modular components:
 - Centralized error handling with sanitized messages
 - Consistent patterns across all modules (getUserPath() helper, validation first)
 
-## Code Quality & Testing
 
-### Development Standards
+## Development
 
-**Input Validation Pattern**
-All tool methods follow this pattern:
-```typescript
-async someOperation(resourceId: string, data: any): Promise<Result> {
-  // 1. Validate all inputs
-  validateResourceId(resourceId, 'resource');
-
-  // 2. Perform operation
-  const result = await this.graphClient.api(`/path/${resourceId}`).get();
-
-  // 3. Return result
-  return result;
-}
+```bash
+npm run build    # Build
+npm run watch    # Watch mode
+npm run dev      # Development mode
 ```
 
-**Error Handling**
-- All errors bubble to centralized handler in `index.ts`
-- Error messages are sanitized before returning to user
-- Detailed errors logged internally for debugging
-- Public error messages don't expose sensitive information
-
-**Audit Logging**
-All security-sensitive operations are automatically logged:
-- Authentication events
-- Resource create/update/delete operations
-- Failed access attempts
-- Input validation failures
-
-### Testing Recommendations
-
-**Unit Tests** (Recommended)
-```typescript
-// Test security validation functions
-describe('validateResourceId', () => {
-  it('should reject path traversal attempts', () => {
-    expect(() => validateResourceId('../../../etc/passwd', 'file'))
-      .toThrow('Invalid file ID');
-  });
-});
-
-// Test encryption/decryption
-describe('Token Encryption', () => {
-  it('should encrypt and decrypt tokens correctly', () => {
-    const token = 'test-access-token';
-    const encrypted = encryptTokenCache(token);
-    const decrypted = decryptTokenCache(encrypted);
-    expect(decrypted).toBe(token);
-  });
-});
-```
-
-**Integration Tests** (Recommended)
-- Mock Microsoft Graph API responses
-- Test tool method execution flows
-- Verify error handling paths
-- Test authentication flows
-
-### OWASP Compliance Status
-
-This server follows OWASP Top 10 (2021) security guidelines:
-
-| Category | Compliance | Implementation |
-|----------|-----------|----------------|
-| A01: Broken Access Control | Partial | Input validation, Microsoft Graph API enforcement |
-| A02: Cryptographic Failures | Excellent | AES-256-GCM encryption, TLS 1.2/1.3 |
-| A03: Injection | Excellent | Comprehensive input validation and sanitization |
-| A04: Insecure Design | Good | Defense in depth, secure defaults |
-| A05: Security Misconfiguration | Excellent | TLS enforcement, secure permissions |
-| A06: Vulnerable Components | Excellent | All dependencies up to date, 0 vulnerabilities |
-| A07: Authentication Failures | Excellent | Token encryption, revocation, validation |
-| A08: Integrity Failures | Excellent | Token cache validation, safe deserialization |
-| A09: Logging Failures | Good | Comprehensive audit logging integrated |
-| A10: SSRF | Good | Hostname validation, URL sanitization |
-
-**Overall OWASP Score: 87/100** (Very Good)
+**TypeScript**: Strict mode, explicit types, ES2022 target  
+**Security**: Input validation, sanitization, encrypted token storage  
+**Architecture**: Modular design, centralized error handling
 
 ## Troubleshooting
 
@@ -837,81 +696,11 @@ This server implements enterprise-grade security following OWASP Top 10 (2021) g
   - **Delegated**: Requires user to authenticate via browser (device code flow)
 - **Token Lifetime**: Delegated auth tokens persist for ~90 days with automatic refresh. Re-authentication is only needed if the connector is not used for the full refresh token lifetime.
 
+
 ## Contributing
 
-**Selective contributions welcome!** This project accepts bug fixes and critical improvements on a monthly review cycle.
-
-### Quick Guidelines
-
-**Before contributing:**
-1. Read [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines
-2. Check existing [issues](https://github.com/sahallam/MCP-Office-365/issues) and [PRs](https://github.com/sahallam/MCP-Office-365/pulls)
-3. Understand the [monthly review schedule](#-response-time-expectations)
-
-**Accepted contributions:**
-- 🐛 Bug fixes (with reproduction steps)
-- 🔒 Security fixes (priority review)
-- 📖 Documentation improvements
-
-**Please fork instead:**
-- ✨ New features
-- ⚡ Performance enhancements
-- 🔨 Refactoring
-- 📦 Dependency updates
-
-### Monthly Review Cycle
-
-Issues and PRs are reviewed on the **1st of each month**. If you need faster resolution, forking is encouraged!
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for complete contribution guidelines, code standards, and forking instructions.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## License
 
-MIT License - see LICENSE file for details
-
-## Related Projects
-
-- [Model Context Protocol](https://modelcontextprotocol.io)
-- [Microsoft Graph API](https://developer.microsoft.com/en-us/graph)
-- [Google Cloud MCP Server](https://github.com/googleapis/gcloud-mcp)
-
-## Support
-
-### Self-Service Resources (Start Here)
-
-Before opening an issue, please check:
-- 📖 **This README** - Comprehensive setup and usage guide
-- 📋 **[Release Notes](RELEASE_NOTES.md)** - Version history and changes
-- 🔧 **[Troubleshooting](#troubleshooting)** - Common issues and solutions
-- 🏗️ **[Architecture](#architecture)** - Understanding the codebase
-- 🔐 **[Security Architecture](#security-architecture)** - Security features
-
-### Getting Help
-
-**For bugs or issues:**
-1. Check [existing issues](https://github.com/sahallam/MCP-Office-365/issues)
-2. If new, [open an issue](https://github.com/sahallam/MCP-Office-365/issues/new) with:
-   - Clear description of the problem
-   - Steps to reproduce
-   - Expected vs actual behavior
-   - Your environment (OS, Node.js version, etc.)
-
-**Response time:** Issues reviewed monthly (1st of each month)
-
-**For questions:**
-- Check the documentation above
-- Review [Microsoft Graph API docs](https://developer.microsoft.com/en-us/graph)
-- Check [MCP Protocol specification](https://modelcontextprotocol.io)
-
-### Community Resources
-
-- [Model Context Protocol Servers](https://github.com/modelcontextprotocol/servers) - Other MCP implementations
-- Community forks may have additional features (search GitHub)
-
-## Acknowledgments
-
-- Built with the [Model Context Protocol SDK](https://github.com/modelcontextprotocol)
-- Powered by [Microsoft Graph API](https://developer.microsoft.com/en-us/graph)
-- Inspired by the [Google Cloud MCP Server](https://github.com/googleapis/gcloud-mcp)
-
-Developed with Claude Code by Steven Hallam.
+MIT License - see [LICENSE](LICENSE) file.
