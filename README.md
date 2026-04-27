@@ -7,10 +7,6 @@
 
 MCP server for Microsoft Office 365 integration. Enables AI assistants like Claude to interact with Outlook, Calendar, OneDrive, SharePoint, Teams, Excel, Word, and OneNote.
 
-## Contributing
-
-Bug fixes and security issues welcome. Features: please fork. See [CONTRIBUTING.md](CONTRIBUTING.md).
-
 ---
 
 ## Features
@@ -699,7 +695,7 @@ This server implements enterprise-grade security following OWASP Top 10 (2021) g
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

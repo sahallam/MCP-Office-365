@@ -1,31 +1,20 @@
 # Contributing
 
-Thanks for your interest! This is a small personal project with limited maintenance time.
+Thanks for your interest in contributing!
 
-## What's Accepted
+## Getting Started
 
-**Bug fixes**: Yes - with reproduction steps  
-**Security fixes**: Yes - priority review  
-**Documentation fixes**: Yes  
-**New features**: No - please fork instead
+1. Check [existing issues](https://github.com/sahallam/MCP-Office-365/issues) first
+2. Open an issue to discuss your idea
+3. Submit a PR with a clear description
 
-## Process
+## Guidelines
 
-1. Open an issue first
-2. Submit PR with clear description
-3. Be patient - reviewed monthly (1st of each month)
-
-## Forking
-
-For features or enhancements, please fork this repo. The MIT license encourages independent development.
-
-## Code Standards
-
-- TypeScript strict mode
+- Follow existing code style
 - Validate all user inputs
-- Follow existing patterns
 - Run `npm run build` before submitting
+- Include clear commit messages
 
 ## Security
 
-Found a vulnerability? Report privately via GitHub Security tab.
+Found a vulnerability? Report it privately via the GitHub Security tab.
