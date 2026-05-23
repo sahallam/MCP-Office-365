@@ -37,7 +37,7 @@
   },
   "homepage": "https://github.com/sahallam/MCP-Office-365#readme",
   "dependencies": {
-    "@azure/msal-node": "^2.15.0",
+    "@azure/msal-node": "^5.2.2",
     "@microsoft/microsoft-graph-client": "^3.0.7",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "axios": "^1.7.9",
