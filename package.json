@@ -39,7 +39,7 @@
   "dependencies": {
     "@azure/msal-node": "^5.2.2",
     "@microsoft/microsoft-graph-client": "^3.0.7",
-    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "axios": "^1.18.0",
     "dotenv": "^16.4.7"
   },
